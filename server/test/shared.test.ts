@@ -16,6 +16,11 @@ describe('normalizeTagName', () => {
     ['スーパー', 'スーパー'],
     ['ไทย ภาษา', 'ไทย ภาษา'],
     ['!!!', ''],
+    ['D.Va', 'd.va'],
+    ['megaman.exe', 'megaman.exe'],
+    ['pochi.', 'pochi.'],
+    ['...', ''],
+    ['- -', ''],
   ])('%p -> %p', (raw, expected) => {
     expect(normalizeTagName(raw)).toBe(expected);
   });
@@ -43,10 +48,11 @@ test('naturalCompare orders numbers by value and ignores case', () => {
 describe('findNearDuplicates', () => {
   const existing = ['big sister', 'school uniform', 'ai', 'kimono', 'sci-fi'];
 
-  test('same name apart from spaces and hyphens', () => {
+  test('same name apart from spaces, hyphens and dots', () => {
     expect(findNearDuplicates('bigsister', existing)).toEqual(['big sister']);
     expect(findNearDuplicates('big-sister', existing)).toEqual(['big sister']);
     expect(findNearDuplicates('scifi', existing)).toEqual(['sci-fi']);
+    expect(findNearDuplicates('sci.fi', existing)).toEqual(['sci-fi']);
   });
 
   test('one character away', () => {

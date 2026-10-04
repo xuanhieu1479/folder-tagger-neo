@@ -87,7 +87,7 @@ test('listTags counts usage, most used first, and includes unused tags', () => {
 
 describe('manageTags', () => {
   test('rename keeps the folders', () => {
-    expect(manageTags(db, 'author', [{ from: 'ann', to: 'Anna B.' }])).toEqual({ renamed: 1, merged: 0, deleted: 0 });
+    expect(manageTags(db, 'author', [{ from: 'ann', to: 'Anna B!' }])).toEqual({ renamed: 1, merged: 0, deleted: 0 });
     expect(folderTags(db, a).author).toEqual(['anna b']);
   });
 

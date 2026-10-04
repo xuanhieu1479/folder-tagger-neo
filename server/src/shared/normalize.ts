@@ -4,12 +4,16 @@
  */
 export const foldKey = (text: string): string => text.normalize('NFKC').toLowerCase();
 
-/** A tag name as stored: letters, marks and digits of any language, spaces and hyphens, lowercased. */
+/**
+ * A tag name as stored: letters, marks and digits of any language, spaces, hyphens and
+ * dots, lowercased. A name without any letter or digit is no name.
+ */
 export function normalizeTagName(raw: string): string {
-  return foldKey(raw)
-    .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, '')
+  const name = foldKey(raw)
+    .replace(/[^\p{L}\p{N}\p{M}\s.-]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
+  return /[\p{L}\p{N}]/u.test(name) ? name : '';
 }
 
 /** Words separated and wrapped by single spaces (' iron man '), so ' x ' finds whole words. */
