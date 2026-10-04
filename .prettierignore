@@ -1,0 +1,7 @@
+node_modules
+dist
+data
+bun.lock
+handoff.md
+web/src/lib/components/ui
+web/src/app.css

@@ -2,7 +2,18 @@
   "name": "folder-tagger-neo",
   "private": true,
   "type": "module",
-  "workspaces": ["server", "web"],
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "build": "bun run --filter web build",
+    "start": "bun scripts/start.ts",
+    "test": "bun test",
+    "check": "tsc -p server && bun run --filter web check",
+    "format": "prettier --write ."
+  },
   "devDependencies": {
     "prettier": "^3.9.9",
     "prettier-plugin-svelte": "^4.1.1",
