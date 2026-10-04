@@ -69,9 +69,9 @@ describe('plain words', () => {
     expect(search('霊夢')).toEqual(['東方Project 紅魔郷']);
   });
 
-  test('punctuation in the search is ignored when matching tags', () => {
+  test('punctuation in a tag name is searched as written', () => {
     expect(search('sci-fi')).toEqual(['[Ai] Iron Suit vol.2']);
-    expect(search('avengers!')).toEqual(['[Ai] Iron Suit vol.2']);
+    expect(search('sci!fi')).toEqual([]);
   });
 });
 

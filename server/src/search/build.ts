@@ -24,7 +24,7 @@ const ORDER_BY: Record<Sort, string> = {
 const hasTag = (condition: string) =>
   `EXISTS (SELECT 1 FROM folder_tags ft JOIN tags t ON t.id = ft.tag_id WHERE ft.folder_id = f.id AND ${condition})`;
 
-/** The term is compared in its tag-name form, without the punctuation tag names never contain. */
+/** The term is compared in its tag-name form. */
 function tagCondition(term: Term): Sql | null {
   const text = normalizeTagName(term.text);
   if (!text) return null;

@@ -86,7 +86,7 @@ describe('import', () => {
 
   test('folders are matched by name, so a moved folder still matches', () => {
     const id = seedFolder(db, { name: 'Moved Folder' });
-    const result = importData(db, { folders: [entry('moved folder', { author: ['Ann!'] })] }, 'append', backups);
+    const result = importData(db, { folders: [entry('moved folder', { author: ['  ANN '] })] }, 'append', backups);
     expect(result).toMatchObject({ created: 0, updated: 1, failed: 0 });
     expect(folderTags(db, id).author).toEqual(['ann']);
     expect(getFolder(db, id).path).toBe('Z:\\library\\Moved Folder');

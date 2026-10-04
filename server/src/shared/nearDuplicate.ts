@@ -1,4 +1,4 @@
-const squash = (name: string) => name.replace(/[\s.-]+/g, '');
+const squash = (name: string) => name.replace(/[^\p{L}\p{N}\p{M}]+/gu, '');
 
 /** True when the two strings differ by one inserted, deleted or replaced character. */
 function withinOneEdit(a: string, b: string): boolean {
@@ -11,8 +11,8 @@ function withinOneEdit(a: string, b: string): boolean {
 }
 
 /**
- * Existing tag names that a new name is probably a typo of: the same once spaces,
- * hyphens and dots are removed, or one character away for names of four or more characters.
+ * Existing tag names that a new name is probably a typo of: the same once spaces
+ * and punctuation are removed, or one character away for names of four or more characters.
  */
 export function findNearDuplicates(name: string, existing: Iterable<string>): string[] {
   const target = squash(name);

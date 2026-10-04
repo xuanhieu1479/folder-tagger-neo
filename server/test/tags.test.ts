@@ -21,7 +21,7 @@ const tagNames = (type: string) =>
 
 describe('applyTags', () => {
   test('add appends to every selected folder and creates new tags, normalised', () => {
-    applyTags(db, { folderIds: [a, b], mode: 'add', tags: { genre: ['  Sci-Fi!! ', 'action'], category: ['Manga'] } });
+    applyTags(db, { folderIds: [a, b], mode: 'add', tags: { genre: ['  "Sci-Fi" ', 'action'], category: ['Manga'] } });
     expect(folderTags(db, a)).toEqual({
       ...emptyTagMap(),
       author: ['ann'],
@@ -87,7 +87,7 @@ test('listTags counts usage, most used first, and includes unused tags', () => {
 
 describe('manageTags', () => {
   test('rename keeps the folders', () => {
-    expect(manageTags(db, 'author', [{ from: 'ann', to: 'Anna B!' }])).toEqual({ renamed: 1, merged: 0, deleted: 0 });
+    expect(manageTags(db, 'author', [{ from: 'ann', to: ' Anna  B ' }])).toEqual({ renamed: 1, merged: 0, deleted: 0 });
     expect(folderTags(db, a).author).toEqual(['anna b']);
   });
 

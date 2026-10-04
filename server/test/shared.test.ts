@@ -9,7 +9,10 @@ describe('normalizeTagName', () => {
     ['Iron Man', 'iron man'],
     ['  Big   Sister  ', 'big sister'],
     ['\tappetite \n', 'appetite'],
-    ['Re:Zero!', 'rezero'],
+    ['Re:Zero!', 're:zero!'],
+    ['+ ucca ∫ ucca +', '+ ucca ∫ ucca +'],
+    ['K&R\'s "C"', "k&r's c"],
+    ['zero\u200bwidth', 'zerowidth'],
     ['sci-fi', 'sci-fi'],
     ['東方Project', '東方project'],
     ['ＦＵＬＬ　Ｗｉｄｔｈ', 'full width'],
@@ -49,11 +52,12 @@ test('naturalCompare orders numbers by value and ignores case', () => {
 describe('findNearDuplicates', () => {
   const existing = ['big sister', 'school uniform', 'ai', 'kimono', 'sci-fi'];
 
-  test('same name apart from spaces, hyphens and dots', () => {
+  test('same name apart from spaces and punctuation', () => {
     expect(findNearDuplicates('bigsister', existing)).toEqual(['big sister']);
     expect(findNearDuplicates('big-sister', existing)).toEqual(['big sister']);
     expect(findNearDuplicates('scifi', existing)).toEqual(['sci-fi']);
     expect(findNearDuplicates('sci.fi', existing)).toEqual(['sci-fi']);
+    expect(findNearDuplicates('sci:fi!', existing)).toEqual(['sci-fi']);
   });
 
   test('one character away', () => {
@@ -78,9 +82,9 @@ describe('classifyTagChange', () => {
 
   test.each([
     ['foo', ' Delete ', { kind: 'delete' }],
-    ['foo', 'Iron Man!', { kind: 'merge', name: 'iron man' }],
+    ['foo', ' Iron  MAN ', { kind: 'merge', name: 'iron man' }],
     ['foo', 'Bar', { kind: 'rename', name: 'bar' }],
-    ['foo', 'Foo!', null],
+    ['foo', ' FOO ', null],
     ['foo', '  ', null],
     ['foo', '!!!', null],
   ])('%p -> %p is %p', (from, to, expected) => {

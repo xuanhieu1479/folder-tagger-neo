@@ -189,9 +189,9 @@ describe('filterSuggestions', () => {
     ]);
   });
 
-  test('matches anywhere in the name, ignoring case and punctuation', () => {
+  test('matches anywhere in the name, ignoring case', () => {
     expect(filterSuggestions(order, [], 'SIS').map(r => r.name)).toEqual(['big sister', 'sister']);
-    expect(filterSuggestions(order, [], 'Sci-Fi!').map(r => r.name)).toEqual(['sci-fi']);
+    expect(filterSuggestions(order, [], ' Sci-Fi ').map(r => r.name)).toEqual(['sci-fi']);
     expect(filterSuggestions(order, [], 'zzz')).toEqual([]);
   });
 
