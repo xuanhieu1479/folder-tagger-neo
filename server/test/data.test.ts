@@ -2,12 +2,13 @@ import type { Database } from 'bun:sqlite';
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
+import * as v from 'valibot';
 import { applyCleanup, planCleanup, type Probe } from '../src/services/cleanup';
 import { addFolders, getFolder, listFolders } from '../src/services/folders';
 import { imagePath, listImages, openReader } from '../src/services/reader';
 import { getSettings, saveSettings } from '../src/services/settings';
 import { applyTags, folderTags } from '../src/services/tags';
-import { exportData, importData, type ImportData } from '../src/services/transfer';
+import { exportData, importData, ImportSchema, type ImportData } from '../src/services/transfer';
 import { emptyTagMap, type ExportFile } from '../src/shared/types';
 import { makeFolder, memoryDb, seedFolder, tempDir } from './fixtures';
 
@@ -113,6 +114,14 @@ describe('import', () => {
     expect(result).toMatchObject({ created: 0, updated: 1, failed: 0 });
     expect(folderTags(db, id)).toEqual({ ...emptyTagMap(), author: ['new'] });
     expect(getFolder(db, id)).toMatchObject({ created_at: 111, updated_at: 222, open_count: 7 });
+  });
+
+  test('fractional dates and counts are rounded instead of failing the import', () => {
+    const id = seedFolder(db, { name: 'Tagged' });
+    const extra = { createdAt: 111.4, updatedAt: 222.5, openCount: 6.6, lastOpenedAt: 333.2 };
+    const data = v.parse(ImportSchema, { folders: [entry('Tagged', { author: ['new'] }, extra)] });
+    expect(importData(db, data, 'overwrite', backups)).toMatchObject({ updated: 1, failed: 0 });
+    expect(getFolder(db, id)).toMatchObject({ created_at: 111, updated_at: 223, open_count: 7, last_opened_at: 333 });
   });
 
   test('entries that cannot be imported are written to an IMPORT-FAILED file', () => {

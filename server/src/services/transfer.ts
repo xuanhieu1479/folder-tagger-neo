@@ -76,15 +76,18 @@ export function exportData(db: Database, backupDir: string, options: { onlyIfCha
   return { file: writeStampedJson(backupDir, BACKUP_SUFFIX, data), count: folders.length };
 }
 
+/** The database only stores whole numbers; one fractional value would fail the whole import. */
+const Whole = v.pipe(v.number(), v.transform(Math.round), v.safeInteger());
+
 export const ImportSchema = v.object({
   folders: v.array(
     v.object({
       path: v.string(),
       name: v.optional(v.string()),
-      createdAt: v.optional(v.number()),
-      updatedAt: v.optional(v.number()),
-      openCount: v.optional(v.number()),
-      lastOpenedAt: v.optional(v.nullable(v.number())),
+      createdAt: v.optional(Whole),
+      updatedAt: v.optional(Whole),
+      openCount: v.optional(Whole),
+      lastOpenedAt: v.optional(v.nullable(Whole)),
       tags: v.optional(TagMapSchema, {}),
     }),
   ),
