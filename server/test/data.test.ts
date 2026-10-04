@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as v from 'valibot';
 import { applyCleanup, planCleanup, previewCleanup, type Probe } from '../src/services/cleanup';
 import { addFolders, getFolder, listFolders } from '../src/services/folders';
-import { imagePath, listImages, openReader } from '../src/services/reader';
+import { imagePath, listImages, openOutsideReader, openReader, outsideImagePath } from '../src/services/reader';
 import { getSettings, saveSettings } from '../src/services/settings';
 import { applyTags, folderTags } from '../src/services/tags';
 import { smallThumbnail } from '../src/services/thumbnails';
@@ -312,6 +312,19 @@ describe('reader', () => {
     const id = (db.query('SELECT id FROM folders').get() as { id: number }).id;
     expect(() => openReader(db, id)).toThrow('This folder has no images.');
     expect(db.query('SELECT open_count FROM folders WHERE id = ?').get(id)).toEqual({ open_count: 0 });
+  });
+
+  test('a folder outside the library is read without being added', () => {
+    expect(() => outsideImagePath(db, 0)).toThrow('No such image.');
+    const dir = makeFolder(root, 'outside', ['2.png', '1.png']);
+    expect(openOutsideReader(db, dir)).toEqual({ name: 'outside', count: 2 });
+    expect(outsideImagePath(db, 0)).toBe(path.join(dir, '1.png'));
+    expect(outsideImagePath(db, 1)).toBe(path.join(dir, '2.png'));
+    expect(() => outsideImagePath(db, 2)).toThrow('No such image.');
+    expect(listFolders(db, { q: '', sort: 'alpha', page: 1, size: 25, noCategory: false }).total).toBe(0);
+
+    expect(() => openOutsideReader(db, makeFolder(root, 'empty', ['notes.txt']))).toThrow('This folder has no images.');
+    expect(outsideImagePath(db, 0)).toBe(path.join(dir, '1.png'));
   });
 });
 

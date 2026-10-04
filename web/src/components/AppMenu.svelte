@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { addFolders, calculateRelations, clearUnusedTags, exportData } from '$lib/actions';
+  import { addFolders, calculateRelations, clearUnusedTags, exportData, readOutsideFolder } from '$lib/actions';
   import { buttonVariants } from '$lib/components/ui/button';
   import * as Menu from '$lib/components/ui/dropdown-menu';
   import { ui } from '$lib/state/ui.svelte';
@@ -13,6 +13,7 @@
   <Menu.Content align="start" class="w-64">
     <Menu.Item onSelect={() => addFolders(false)}>Add folder…</Menu.Item>
     <Menu.Item onSelect={() => addFolders(true)}>Add several folders…</Menu.Item>
+    <Menu.Item onSelect={readOutsideFolder}>Read a folder outside the library…</Menu.Item>
     <Menu.Separator />
     <Menu.Item onSelect={() => (ui.manageOpen = true)}>Manage tags…</Menu.Item>
     <Menu.Item onSelect={calculateRelations}>Calculate tag relations</Menu.Item>

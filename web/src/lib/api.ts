@@ -34,8 +34,9 @@ export async function attempt<T>(action: () => Promise<T>): Promise<T | undefine
 export const thumbnailUrl = (id: number, thumbnail: string) =>
   `/api/folders/${id}/thumbnail?v=${encodeURIComponent(thumbnail)}`;
 
-export const imageUrl = (id: number, index: number, version: number) =>
-  `/api/folders/${id}/images/${index}?v=${version}`;
+/** An image in the reader; `id` is null for the folder outside the library. */
+export const imageUrl = (id: number | null, index: number, version: number) =>
+  `/api/${id === null ? 'reader' : `folders/${id}`}/images/${index}?v=${version}`;
 
 export async function copyText(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);

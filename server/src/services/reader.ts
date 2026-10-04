@@ -40,3 +40,22 @@ export function imagePath(db: Database, id: number, index: number): string {
   if (!name) throw new HttpError(404, 'No such image.');
   return path.join(folder.path, name);
 }
+
+// The folder outside the library that the reader has open, with its listing.
+const outside = new WeakMap<Database, { dir: string; images: string[] }>();
+
+/** Opens a folder that is not in the library in the reader, and returns how many images it has. */
+export function openOutsideReader(db: Database, dir: string): { name: string; count: number } {
+  const images = listImages(dir);
+  if (images.length === 0) throw new HttpError(404, 'This folder has no images.');
+  outside.set(db, { dir, images });
+  return { name: path.basename(dir), count: images.length };
+}
+
+/** The file path of image number `index` of the folder opened with `openOutsideReader`. */
+export function outsideImagePath(db: Database, index: number): string {
+  const open = outside.get(db);
+  const name = open?.images[index];
+  if (!open || !name) throw new HttpError(404, 'No such image.');
+  return path.join(open.dir, name);
+}

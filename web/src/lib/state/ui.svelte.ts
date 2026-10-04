@@ -13,7 +13,8 @@ class Ui {
   importOpen = $state(false);
   cleanupOpen = $state(false);
   helpOpen = $state(false);
-  reader = $state<{ id: number; name: string; count: number; version: number } | null>(null);
+  /** The folder open in the reader; `id` is null for a folder outside the library. */
+  reader = $state<{ id: number | null; name: string; count: number; version: number } | null>(null);
   confirmation = $state<Confirmation | null>(null);
   /** A long task is running; the app shows a blocking spinner. */
   busy = $state(false);

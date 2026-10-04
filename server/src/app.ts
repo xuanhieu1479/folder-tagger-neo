@@ -5,6 +5,7 @@ import { APP_ID } from './shared/types';
 import { logError } from './log';
 import { folderRoutes } from './routes/folders';
 import { maintenanceRoutes } from './routes/maintenance';
+import { readerRoutes } from './routes/reader';
 import { relationRoutes, tagRoutes } from './routes/tags';
 
 export function createApp(ctx: AppContext) {
@@ -19,6 +20,7 @@ export function createApp(ctx: AppContext) {
   return app
     .get('/health', c => c.json({ ok: true, app: APP_ID }))
     .route('/folders', folderRoutes(ctx))
+    .route('/reader', readerRoutes(ctx))
     .route('/tags', tagRoutes(ctx))
     .route('/relations', relationRoutes(ctx))
     .route('/', maintenanceRoutes(ctx));

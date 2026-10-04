@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createApp } from '../src/app';
 import type { AppContext } from '../src/context';
+import { openOutsideReader } from '../src/services/reader';
 import { makeFolder, memoryDb, PNG, tempDir } from './fixtures';
 
 const tmp = tempDir('routes');
@@ -76,6 +77,13 @@ describe('folders', () => {
     expect(await json(send(`/folders/${id}/read`))).toEqual({ name: 'テスト 100% #1', count: 2 });
     expect((await get(`/folders/${id}/images/1`)).status).toBe(200);
     expect((await get(`/folders/${id}/images/2`)).status).toBe(404);
+  });
+
+  test('images of a folder outside the library are served as files', async () => {
+    expect((await get('/reader/images/0')).status).toBe(404);
+    openOutsideReader(ctx.db, makeFolder(root, 'outside', ['1.png']));
+    expect((await get('/reader/images/0')).status).toBe(200);
+    expect((await get('/reader/images/1')).status).toBe(404);
   });
 
   test('rename', async () => {

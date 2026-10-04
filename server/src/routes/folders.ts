@@ -35,7 +35,7 @@ const ListQuery = v.object({
 
 const Ids = v.object({ ids: v.array(v.number()) });
 
-const imageResponse = (file: string, maxAge: number) => {
+export const imageResponse = (file: string, maxAge: number) => {
   const image = Bun.file(file);
   return new Response(image, { headers: { 'Cache-Control': `private, max-age=${maxAge}` } });
 };

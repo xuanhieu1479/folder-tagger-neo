@@ -31,6 +31,12 @@ export async function openReader(id: number): Promise<void> {
   if (opened) ui.reader = { id, ...opened, version: Date.now() };
 }
 
+/** Shows the Windows folder dialog and opens what was chosen in the reader, without adding it to the library. */
+export async function readOutsideFolder(): Promise<void> {
+  const opened = await attempt(() => call(api.reader.pick.$post()));
+  if (opened) ui.reader = { id: null, ...opened, version: Date.now() };
+}
+
 export async function openInExplorer(id: number): Promise<void> {
   await attempt(() => call(api.folders[':id'].explorer.$post(idParam(id))));
 }
