@@ -126,6 +126,11 @@ describe('applySuggestion', () => {
     expect(result.order.author).toEqual(['ann', 'zed', 'bob']);
   });
 
+  test('a tag named like a built-in object member suggests nothing', () => {
+    for (const type of ['character', 'parody', 'author', 'genre'] as const)
+      expect(applySuggestion(form(), relations, type, 'constructor')).toEqual(form());
+  });
+
   test('a character never replaces a parody that is already set', () => {
     const result = applySuggestion(form({ parody: ['original'] }), relations, 'character', 'thor');
     expect(result.selected.parody).toEqual(['original']);

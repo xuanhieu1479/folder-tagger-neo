@@ -10,13 +10,14 @@
   import { normalizeTagName } from '$server/shared/normalize';
   import { classifyTagChange, DELETE_KEYWORD } from '$server/shared/tagChange';
   import { TAG_TYPES, type TagType } from '$server/shared/types';
+  import { SvelteMap } from 'svelte/reactivity';
   import { toast } from 'svelte-sonner';
 
   let type = $state<TagType>('author');
   let sortBy = $state<'name' | 'count'>('name');
   let search = $state('');
   /** New values typed so far, by current tag name. */
-  let edits = $state<Record<string, string>>({});
+  const edits = new SvelteMap<string, string>();
   let saving = $state(false);
 
   const ofType = $derived(tags.all.filter(tag => tag.type === type));
@@ -30,12 +31,8 @@
 
   /** What the server will do with the value typed for a tag; null when nothing would change. */
   const effectOf = (name: string) =>
-    classifyTagChange(name, edits[name] ?? '', other => names.has(other))?.kind ?? null;
-  const changes = $derived(
-    Object.entries(edits)
-      .filter(([from]) => effectOf(from) !== null)
-      .map(([from, to]) => ({ from, to })),
-  );
+    classifyTagChange(name, edits.get(name) ?? '', other => names.has(other))?.kind ?? null;
+  const changes = $derived([...edits].filter(([from]) => effectOf(from) !== null).map(([from, to]) => ({ from, to })));
 
   type Effect = NonNullable<ReturnType<typeof effectOf>>;
   const EFFECT_STYLE: Record<Effect, string> = {
@@ -46,7 +43,7 @@
 
   function changeType(next: TagType) {
     type = next;
-    edits = {};
+    edits.clear();
   }
 
   async function save() {
@@ -55,13 +52,13 @@
     saving = false;
     if (!result) return;
     toast.success(`Renamed ${result.renamed}, merged ${result.merged}, deleted ${result.deleted}.`);
-    edits = {};
+    edits.clear();
     await refresh();
   }
 
   function close() {
     ui.manageOpen = false;
-    edits = {};
+    edits.clear();
     search = '';
   }
 </script>
@@ -114,8 +111,8 @@
                   aria-label="New value for {tag.name}"
                   spellcheck={false}
                   placeholder={effect === null ? '' : undefined}
-                  value={edits[tag.name] ?? ''}
-                  oninput={event => (edits[tag.name] = event.currentTarget.value)}
+                  value={edits.get(tag.name) ?? ''}
+                  oninput={event => edits.set(tag.name, event.currentTarget.value)}
                 />
               </td>
               <td class="px-3 py-1 text-right tabular-nums">

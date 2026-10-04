@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite';
 import { getJson, setJson } from '../db/open';
-import { emptyRelations, type Relations } from '../shared/types';
+import { emptyRelations, own, type Relations } from '../shared/types';
 
 const RELATIONS_KEY = 'relations';
 
@@ -47,7 +47,8 @@ const PARODY_SQL = `
   GROUP BY s.parody_id, c.id
   ORDER BY p.name, COUNT(*) DESC, c.name`;
 
-const push = (map: Record<string, string[]>, parent: string, child: string) => (map[parent] ??= []).push(child);
+const push = (map: Record<string, string[]>, parent: string, child: string) =>
+  (own(map, parent) ?? (map[parent] = [])).push(child);
 
 /** Learns which tags go together from the whole library and stores the result. */
 export function calculateRelations(db: Database): Relations {
@@ -61,11 +62,11 @@ export function calculateRelations(db: Database): Relations {
   for (const row of authorRows) push(relations[`author_${row.type}`], row.parent, row.child);
 
   const parodyRows = db.query(PARODY_SQL).all() as { parent: string; child: string; count: number }[];
-  const best: Record<string, number> = {};
+  const best = new Map<string, number>();
   for (const row of parodyRows) {
     push(relations.parody_character, row.parent, row.child);
-    if (row.count > (best[row.child] ?? 0)) {
-      best[row.child] = row.count;
+    if (row.count > (best.get(row.child) ?? 0)) {
+      best.set(row.child, row.count);
       relations.character_parody[row.child] = row.parent;
     }
   }

@@ -1,5 +1,5 @@
 import { normalizeTagName } from '$server/shared/normalize';
-import type { Relations, TagMap, TagType } from '$server/shared/types';
+import { own, type Relations, type TagMap, type TagType } from '$server/shared/types';
 
 /** The tag dialog's state that smart suggestions can change. */
 export type TagForm = {
@@ -32,7 +32,7 @@ export function applySuggestion(form: TagForm, relations: Relations, type: TagTy
   const order: TagMap = { ...form.order };
 
   const parodyAdded = (parody: string) => {
-    order.character = toFront(order.character, relations.parody_character[parody] ?? []);
+    order.character = toFront(order.character, own(relations.parody_character, parody) ?? []);
     order.author = toFront(order.author, parentsOf(relations.author_parody, parody));
   };
   const fillParody = (parody: string | undefined) => {
@@ -41,12 +41,12 @@ export function applySuggestion(form: TagForm, relations: Relations, type: TagTy
     parodyAdded(parody);
   };
 
-  if (type === 'character') fillParody(relations.character_parody[name]);
+  if (type === 'character') fillParody(own(relations.character_parody, name));
   else if (type === 'parody') parodyAdded(name);
   else if (type === 'author') {
-    fillParody(relations.author_parody[name]?.[0]);
-    order.genre = toFront(order.genre, relations.author_genre[name] ?? []);
-    const categories = relations.author_category[name] ?? [];
+    fillParody(own(relations.author_parody, name)?.[0]);
+    order.genre = toFront(order.genre, own(relations.author_genre, name) ?? []);
+    const categories = own(relations.author_category, name) ?? [];
     if (selected.category.length === 0 && categories[0]) selected.category = [categories[0]];
     else order.category = toFront(order.category, categories);
   } else if (type === 'genre' && selected.author.length === 0)

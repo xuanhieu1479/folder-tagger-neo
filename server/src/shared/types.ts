@@ -40,6 +40,13 @@ export const emptyRelations = (): Relations => ({
   character_parody: {},
 });
 
+/**
+ * Looks a tag name up in a plain object. A bare `map[name]` would find inherited
+ * members for a tag named "constructor".
+ */
+export const own = <T>(map: Record<string, T>, name: string): T | undefined =>
+  Object.hasOwn(map, name) ? map[name] : undefined;
+
 export type Settings = {
   defaultSearch: string;
   randomAtStartup: boolean;

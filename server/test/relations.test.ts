@@ -14,6 +14,17 @@ const add = (count: number, tags: Partial<Record<TagType, string[]>>) => {
   for (let i = 0; i < count; i++) seedFolder(db, { name: `folder ${n++}`, tags });
 };
 
+test('a tag named like a built-in object member is an ordinary tag', () => {
+  add(5, { author: ['constructor'], parody: ['constructor'], character: ['constructor'], genre: ['constructor'] });
+  expect(calculateRelations(db)).toEqual({
+    ...emptyRelations(),
+    author_parody: { constructor: ['constructor'] },
+    author_genre: { constructor: ['constructor'] },
+    parody_character: { constructor: ['constructor'] },
+    character_parody: { constructor: 'constructor' },
+  });
+});
+
 describe('author relations', () => {
   test('nothing is learned from an empty library', () => {
     expect(calculateRelations(db)).toEqual(emptyRelations());
