@@ -1,7 +1,8 @@
 import type { Database } from 'bun:sqlite';
 import { HttpError } from '../errors';
 import { normalizeTagName, wordsKey } from '../shared/normalize';
-import { TAG_TYPES, emptyTagMap, type TagCount, type TagMap, type TagType } from '../shared/types';
+import { classifyTagChange } from '../shared/tagChange';
+import { TAG_TYPES, emptyTagMap, type ApplyMode, type TagCount, type TagMap, type TagType } from '../shared/types';
 
 /** Every tag with the number of folders using it, most used first. Unused tags are included. */
 export function listTags(db: Database): TagCount[] {
@@ -38,32 +39,33 @@ const findTagId = (db: Database, type: TagType, name: string): number | null =>
 
 /** Returns the id of a tag, creating it when it does not exist yet. The name must be normalised. */
 function ensureTagId(db: Database, type: TagType, name: string): number {
-  db.prepare('INSERT OR IGNORE INTO tags (type, name, name_words) VALUES (?, ?, ?)').run(type, name, wordsKey(name));
+  db.query('INSERT OR IGNORE INTO tags (type, name, name_words) VALUES (?, ?, ?)').run(type, name, wordsKey(name));
   return findTagId(db, type, name)!;
 }
 
 const touch = (db: Database, folderId: number) =>
-  db.prepare('UPDATE folders SET updated_at = ? WHERE id = ?').run(Date.now(), folderId);
+  db.query('UPDATE folders SET updated_at = ? WHERE id = ?').run(Date.now(), folderId);
+
+const linkStatement = (db: Database) => db.query('INSERT OR IGNORE INTO folder_tags (folder_id, tag_id) VALUES (?, ?)');
 
 /** Replaces all tags of one folder. Runs inside the caller's transaction. */
 export function setFolderTags(db: Database, folderId: number, tags: TagMap): void {
-  db.prepare('DELETE FROM folder_tags WHERE folder_id = ?').run(folderId);
-  const link = db.prepare('INSERT OR IGNORE INTO folder_tags (folder_id, tag_id) VALUES (?, ?)');
+  db.query('DELETE FROM folder_tags WHERE folder_id = ?').run(folderId);
+  const link = linkStatement(db);
   for (const type of TAG_TYPES) for (const name of tags[type]) link.run(folderId, ensureTagId(db, type, name));
 }
 
 export type ApplyTags = {
   folderIds: number[];
-  /** add: append the tags. edit: replace all tags (one folder only). remove: take the tags away. */
-  mode: 'add' | 'edit' | 'remove';
+  mode: ApplyMode;
   tags: Partial<Record<TagType, string[]>>;
 };
 
 export function applyTags(db: Database, { folderIds, mode, tags: rawTags }: ApplyTags): void {
   if (mode === 'edit' && folderIds.length !== 1) throw new HttpError(400, 'Only one folder can be edited at a time!');
   const tags = normalizeTagMap(rawTags);
-  const link = db.prepare('INSERT OR IGNORE INTO folder_tags (folder_id, tag_id) VALUES (?, ?)');
-  const unlink = db.prepare('DELETE FROM folder_tags WHERE folder_id = ? AND tag_id = ?');
+  const link = linkStatement(db);
+  const unlink = db.query('DELETE FROM folder_tags WHERE folder_id = ? AND tag_id = ?');
 
   db.transaction(() => {
     for (const folderId of folderIds) {
@@ -84,7 +86,7 @@ export function applyTags(db: Database, { folderIds, mode, tags: rawTags }: Appl
 
 /** Removes every tag from the given folders. */
 export function clearFolderTags(db: Database, folderIds: number[]): void {
-  const clear = db.prepare('DELETE FROM folder_tags WHERE folder_id = ?');
+  const clear = db.query('DELETE FROM folder_tags WHERE folder_id = ?');
   db.transaction(() => {
     for (const folderId of folderIds) {
       clear.run(folderId);
@@ -96,11 +98,9 @@ export function clearFolderTags(db: Database, folderIds: number[]): void {
 export type TagChange = { from: string; to: string };
 export type ManageResult = { renamed: number; merged: number; deleted: number };
 
-const DELETE_KEYWORD = 'delete';
-
 /**
- * Applies Manage Tags edits for one tag type, in order. A new value of "delete"
- * deletes the tag; a new value that is already a tag merges the two; anything else renames.
+ * Applies Manage Tags edits for one tag type, in order. `classifyTagChange` decides
+ * what each edit does.
  */
 export function manageTags(db: Database, type: TagType, changes: TagChange[]): ManageResult {
   const result: ManageResult = { renamed: 0, merged: 0, deleted: 0 };
@@ -108,24 +108,20 @@ export function manageTags(db: Database, type: TagType, changes: TagChange[]): M
     for (const change of changes) {
       const fromId = findTagId(db, type, change.from);
       if (fromId === null) continue;
-      if (change.to.trim().toLowerCase() === DELETE_KEYWORD) {
-        db.prepare('DELETE FROM tags WHERE id = ?').run(fromId);
-        result.deleted++;
+      const effect = classifyTagChange(change.from, change.to, name => findTagId(db, type, name) !== null);
+      if (!effect) continue;
+      if (effect.kind === 'rename') {
+        const { name } = effect;
+        db.query('UPDATE tags SET name = ?, name_words = ? WHERE id = ?').run(name, wordsKey(name), fromId);
+        result.renamed++;
         continue;
       }
-      const name = normalizeTagName(change.to);
-      if (!name || name === change.from) continue;
-      const targetId = findTagId(db, type, name);
-      if (targetId === null) {
-        db.prepare('UPDATE tags SET name = ?, name_words = ? WHERE id = ?').run(name, wordsKey(name), fromId);
-        result.renamed++;
-      } else {
-        db.prepare(
+      if (effect.kind === 'merge')
+        db.query(
           'INSERT OR IGNORE INTO folder_tags (folder_id, tag_id) SELECT folder_id, ? FROM folder_tags WHERE tag_id = ?',
-        ).run(targetId, fromId);
-        db.prepare('DELETE FROM tags WHERE id = ?').run(fromId);
-        result.merged++;
-      }
+        ).run(findTagId(db, type, effect.name), fromId);
+      db.query('DELETE FROM tags WHERE id = ?').run(fromId);
+      result[effect.kind === 'merge' ? 'merged' : 'deleted']++;
     }
   })();
   return result;
@@ -133,5 +129,5 @@ export function manageTags(db: Database, type: TagType, changes: TagChange[]): M
 
 /** Deletes tags that no folder uses and returns how many were deleted. */
 export function clearUnusedTags(db: Database): number {
-  return db.prepare('DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM folder_tags) RETURNING id').all().length;
+  return db.query('DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM folder_tags) RETURNING id').all().length;
 }

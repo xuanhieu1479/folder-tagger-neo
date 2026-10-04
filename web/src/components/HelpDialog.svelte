@@ -15,7 +15,7 @@
   ];
 </script>
 
-<Dialog.Root open={ui.helpOpen} onOpenChange={open => !open && (ui.helpOpen = false)}>
+<Dialog.Root bind:open={ui.helpOpen}>
   <Dialog.Content class="sm:max-w-2xl">
     <Dialog.Header>
       <Dialog.Title>Search</Dialog.Title>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, attempt, call } from '$lib/api';
+  import { api, attempt, call, idParam } from '$lib/api';
   import { Button } from '$lib/components/ui/button';
   import * as Dialog from '$lib/components/ui/dialog';
   import { Input } from '$lib/components/ui/input';
@@ -27,7 +27,7 @@
     const folderId = id;
     saving = true;
     const renamed = await attempt(() =>
-      call(api.folders[':id'].rename.$post({ param: { id: String(folderId) }, json: { name } })),
+      call(api.folders[':id'].rename.$post({ ...idParam(folderId), json: { name } })),
     );
     saving = false;
     if (!renamed) return;
@@ -38,7 +38,7 @@
   }
 </script>
 
-<Dialog.Root open={ui.renameOpen} onOpenChange={open => !open && (ui.renameOpen = false)}>
+<Dialog.Root bind:open={ui.renameOpen}>
   <Dialog.Content class="sm:max-w-2xl">
     <Dialog.Header>
       <Dialog.Title>Rename Folder</Dialog.Title>

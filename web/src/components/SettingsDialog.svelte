@@ -29,7 +29,7 @@
   }
 </script>
 
-<Dialog.Root open={ui.settingsOpen} onOpenChange={open => !open && (ui.settingsOpen = false)}>
+<Dialog.Root bind:open={ui.settingsOpen}>
   <Dialog.Content class="sm:max-w-lg">
     <Dialog.Header>
       <Dialog.Title>Settings</Dialog.Title>

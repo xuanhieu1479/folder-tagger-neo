@@ -12,21 +12,21 @@ The first start builds the web app. After changing anything under `web/`, run `b
 
 Everything is inside this folder, under `data/` (ignored by git):
 
-| Path | Contents |
-|---|---|
-| `data/app.db` | The library (SQLite). |
+| Path            | Contents                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `data/app.db`   | The library (SQLite).                                                                                                                                                    |
 | `data/backups/` | JSON exports. One is written at startup whenever the library changed since the last one. Clean-up and import logs (`-CLEARED.json`, `-IMPORT-FAILED.json`) also go here. |
-| `data/logs/` | Error logs, one file per day. |
+| `data/logs/`    | Error logs, one file per day.                                                                                                                                            |
 
 ## Development
 
-| Command | What it does |
-|---|---|
-| `bun run seed` | Builds a fake library: 300 folders in `data/dev-fixtures` and a database in `data/dev`. |
-| `bun run dev` | Runs the server and Vite against the fake library. Open `http://127.0.0.1:5173`. |
-| `bun test` | Unit tests. |
-| `bun run check` | Type checks (`tsc` for the server, `svelte-check` for the web app). |
-| `bun run format` | Prettier. |
+| Command          | What it does                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| `bun run seed`   | Builds a fake library: 300 folders in `data/dev-fixtures` and a database in `data/dev`. |
+| `bun run dev`    | Runs the server and Vite against the fake library. Open `http://127.0.0.1:5173`.        |
+| `bun test`       | Unit tests.                                                                             |
+| `bun run check`  | Type checks (`tsc` for the server, `svelte-check` for the web app).                     |
+| `bun run format` | Prettier.                                                                               |
 
 Layout: `server/` is a Hono API on Bun with `bun:sqlite`; `web/` is a Svelte 5 single-page app with shadcn-svelte components. The web app imports the server's route types, so the API client is typed end to end. `server/src/shared/` holds code both sides use.
 

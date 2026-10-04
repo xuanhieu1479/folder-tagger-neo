@@ -2,10 +2,10 @@ import type { Database } from 'bun:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { HttpError } from '../errors';
-import { buildSearch } from '../search/build';
+import { buildSearch, type SearchOptions } from '../search/build';
 import { parseSearch } from '../search/parse';
 import { foldKey, pathKey, wordsKey } from '../shared/normalize';
-import type { FolderItem, Sort } from '../shared/types';
+import type { FolderItem } from '../shared/types';
 import { findThumbnail } from './thumbnails';
 
 export type FolderRow = {
@@ -20,14 +20,7 @@ export type FolderRow = {
   last_opened_at: number | null;
 };
 
-export type ListParams = {
-  q: string;
-  category?: string;
-  noCategory?: boolean;
-  sort: Sort;
-  page: number;
-  size: number;
-};
+export type ListParams = SearchOptions & { q: string; page: number; size: number };
 
 export type ListResult = { items: FolderItem[]; total: number; page: number; pages: number };
 
@@ -62,7 +55,7 @@ export type NewFolder = {
   lastOpenedAt?: number | null;
 };
 
-const folderName = (folderPath: string) => path.basename(folderPath) || folderPath;
+export const folderName = (folderPath: string) => path.basename(folderPath) || folderPath;
 
 /** Inserts a folder that is known to be absent from the library and returns its id. */
 export function insertFolder(db: Database, folder: NewFolder): number {
@@ -70,7 +63,7 @@ export function insertFolder(db: Database, folder: NewFolder): number {
   const name = folderName(fullPath);
   const now = Date.now();
   const result = db
-    .prepare(
+    .query(
       `INSERT INTO folders (path, path_key, name, name_key, name_words, thumbnail,
          created_at, updated_at, open_count, last_opened_at, shuffle_key)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, random())`,
@@ -93,7 +86,8 @@ export function insertFolder(db: Database, folder: NewFolder): number {
 export const findByPath = (db: Database, folderPath: string): FolderRow | null =>
   db.query('SELECT * FROM folders WHERE path_key = ?').get(pathKey(path.resolve(folderPath))) as FolderRow | null;
 
-const isDirectory = (folderPath: string) => fs.statSync(folderPath, { throwIfNoEntry: false })?.isDirectory() ?? false;
+export const isDirectory = (folderPath: string) =>
+  fs.statSync(folderPath, { throwIfNoEntry: false })?.isDirectory() ?? false;
 
 export type AddResult = { added: number; skipped: { path: string; reason: string }[] };
 
@@ -115,7 +109,7 @@ export function addFolders(db: Database, paths: string[]): AddResult {
 
 /** Removes folders from the library only; nothing on disk is touched. */
 export function removeFolders(db: Database, ids: number[]): number {
-  const remove = db.prepare('DELETE FROM folders WHERE id = ? RETURNING id');
+  const remove = db.query('DELETE FROM folders WHERE id = ? RETURNING id');
   let removed = 0;
   db.transaction(() => {
     for (const id of ids) removed += remove.all(id).length;
@@ -148,7 +142,7 @@ export function renameFolder(db: Database, id: number, rawName: string): FolderI
       throw error;
     }
     try {
-      db.prepare(
+      db.query(
         'UPDATE folders SET path = ?, path_key = ?, name = ?, name_key = ?, name_words = ?, updated_at = ? WHERE id = ?',
       ).run(newPath, pathKey(newPath), name, foldKey(name), wordsKey(name), Date.now(), id);
     } catch (error) {
@@ -161,7 +155,7 @@ export function renameFolder(db: Database, id: number, rawName: string): FolderI
 
 /** Counts one opening of a folder (in Explorer or in the reader) for the Popular sort. */
 export function markOpened(db: Database, id: number): void {
-  db.prepare('UPDATE folders SET open_count = open_count + 1, last_opened_at = ? WHERE id = ?').run(Date.now(), id);
+  db.query('UPDATE folders SET open_count = open_count + 1, last_opened_at = ? WHERE id = ?').run(Date.now(), id);
 }
 
 /** Gives every folder a new random position; random order then pages like any other sort. */

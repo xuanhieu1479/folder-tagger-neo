@@ -4,7 +4,7 @@
   import { library } from '$lib/state/library.svelte';
   import { settings } from '$lib/state/tags.svelte';
   import { selectClass } from '$lib/utils';
-  import { PAGE_SIZES } from '$server/shared/types';
+  import { PAGE_SIZES, type PageSize } from '$server/shared/types';
   import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
   import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
   import ChevronsLeftIcon from '@lucide/svelte/icons/chevrons-left';
@@ -14,7 +14,7 @@
   const atStart = $derived(library.page <= 1);
   const atEnd = $derived(library.page >= library.pages);
 
-  function setSize(size: number) {
+  function setSize(size: PageSize) {
     void settings.save({ pageSize: size });
     void library.setSize(size);
   }
@@ -77,7 +77,7 @@
     <select
       class={[selectClass, 'w-20']}
       value={String(library.size)}
-      onchange={event => setSize(Number(event.currentTarget.value))}
+      onchange={event => setSize(Number(event.currentTarget.value) as PageSize)}
     >
       {#each PAGE_SIZES as size (size)}
         <option value={String(size)}>{size}</option>

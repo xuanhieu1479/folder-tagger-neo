@@ -21,5 +21,8 @@ export function findThumbnail(dir: string): string | null {
   const names = listFiles(dir);
   const preferred = names.find(name => name.toLowerCase() === PREFERRED);
   if (preferred) return preferred;
-  return names.filter(name => THUMBNAIL_FILE.test(name)).sort(naturalCompare)[0] ?? null;
+  let first: string | null = null;
+  for (const name of names)
+    if (THUMBNAIL_FILE.test(name) && (first === null || naturalCompare(name, first) < 0)) first = name;
+  return first;
 }

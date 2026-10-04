@@ -1,17 +1,16 @@
 <script lang="ts">
+  import { refresh } from '$lib/actions';
   import { api, attempt, call } from '$lib/api';
   import { Button } from '$lib/components/ui/button';
   import * as Dialog from '$lib/components/ui/dialog';
   import { Input } from '$lib/components/ui/input';
-  import { library } from '$lib/state/library.svelte';
   import { tags } from '$lib/state/tags.svelte';
   import { ui } from '$lib/state/ui.svelte';
-  import { selectClass } from '$lib/utils';
+  import { plural, selectClass } from '$lib/utils';
   import { normalizeTagName } from '$server/shared/normalize';
+  import { classifyTagChange, DELETE_KEYWORD } from '$server/shared/tagChange';
   import { TAG_TYPES, type TagType } from '$server/shared/types';
   import { toast } from 'svelte-sonner';
-
-  const DELETE_KEYWORD = 'delete';
 
   let type = $state<TagType>('author');
   let sortBy = $state<'name' | 'count'>('name');
@@ -22,26 +21,24 @@
 
   const ofType = $derived(tags.all.filter(tag => tag.type === type));
   const names = $derived(new Set(ofType.map(tag => tag.name)));
+  const filter = $derived(normalizeTagName(search));
   const rows = $derived(
     ofType
-      .filter(tag => tag.name.includes(normalizeTagName(search)))
+      .filter(tag => tag.name.includes(filter))
       .sort((a, b) => (sortBy === 'count' ? a.count - b.count : 0) || a.name.localeCompare(b.name)),
   );
+
+  /** What the server will do with the value typed for a tag; null when nothing would change. */
+  const effectOf = (name: string) =>
+    classifyTagChange(name, edits[name] ?? '', other => names.has(other))?.kind ?? null;
   const changes = $derived(
     Object.entries(edits)
-      .filter(([from, to]) => to.trim() !== '' && to.trim() !== from)
+      .filter(([from]) => effectOf(from) !== null)
       .map(([from, to]) => ({ from, to })),
   );
 
-  type Effect = 'delete' | 'merge' | 'rename' | null;
-  function effectOf(name: string): Effect {
-    const value = (edits[name] ?? '').trim();
-    if (!value || value === name) return null;
-    if (value.toLowerCase() === DELETE_KEYWORD) return 'delete';
-    const target = normalizeTagName(value);
-    return target !== name && names.has(target) ? 'merge' : 'rename';
-  }
-  const EFFECT_STYLE: Record<Exclude<Effect, null>, string> = {
+  type Effect = NonNullable<ReturnType<typeof effectOf>>;
+  const EFFECT_STYLE: Record<Effect, string> = {
     delete: 'text-destructive',
     merge: 'text-amber-600 dark:text-amber-400',
     rename: 'text-sky-600 dark:text-sky-400',
@@ -59,7 +56,7 @@
     if (!result) return;
     toast.success(`Renamed ${result.renamed}, merged ${result.merged}, deleted ${result.deleted}.`);
     edits = {};
-    await Promise.all([tags.load(), library.load()]);
+    await refresh();
   }
 
   function close() {
@@ -136,7 +133,7 @@
     <Dialog.Footer>
       <Button variant="outline" onclick={close}>Close</Button>
       <Button disabled={saving || changes.length === 0} onclick={save}>
-        Save {changes.length || ''} change{changes.length === 1 ? '' : 's'}
+        Save {changes.length ? plural(changes.length, 'change') : 'changes'}
       </Button>
     </Dialog.Footer>
   </Dialog.Content>

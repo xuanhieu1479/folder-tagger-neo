@@ -1,5 +1,5 @@
 import { api, attempt, call } from '$lib/api';
-import type { FolderItem, Sort } from '$server/shared/types';
+import type { FolderItem, PageSize, Settings, Sort } from '$server/shared/types';
 
 export const ALL_CATEGORIES = 'all';
 export const NO_CATEGORY = 'none';
@@ -14,7 +14,7 @@ class Library {
   category = $state(ALL_CATEGORIES);
   sort = $state<Sort>('alpha');
   page = $state(1);
-  size = $state(25);
+  size = $state<PageSize>(25);
 
   items = $state<FolderItem[]>([]);
   total = $state(0);
@@ -49,10 +49,16 @@ class Library {
     this.selected = this.selected.filter(id => visible.has(id));
   }
 
-  async #fromFirstPage(): Promise<void> {
-    this.page = 1;
-    await this.load();
-    this.onloaded?.();
+  #fromFirstPage(): Promise<void> {
+    return this.goto(1);
+  }
+
+  /** The first load of the app, as the settings ask for it. */
+  start(settings: Settings): Promise<void> {
+    this.size = settings.pageSize;
+    this.query = settings.defaultSearch;
+    this.#applied = this.query;
+    return settings.randomAtStartup ? this.shuffle() : this.#fromFirstPage();
   }
 
   /** Applies the text in the search box. */
@@ -71,7 +77,7 @@ class Library {
     return this.#fromFirstPage();
   }
 
-  setSize(size: number): Promise<void> {
+  setSize(size: PageSize): Promise<void> {
     this.size = size;
     return this.#fromFirstPage();
   }

@@ -2,10 +2,19 @@ import type { Database } from 'bun:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as v from 'valibot';
+import { writeStampedJson } from '../context';
 import { foldKey } from '../shared/normalize';
-import { emptyTagMap, type ExportFile, type ExportFolder, type TagMap, type TagType } from '../shared/types';
-import { fileStamp } from '../time';
-import { findByPath, insertFolder, type FolderRow } from './folders';
+import {
+  APP_ID,
+  emptyTagMap,
+  type ExportFile,
+  type ExportFolder,
+  type ImportMode,
+  type TagMap,
+  type TagType,
+} from '../shared/types';
+import { TagMapSchema } from '../validate';
+import { findByPath, folderName, insertFolder, isDirectory, type FolderRow } from './folders';
 import { normalizeTagMap, setFolderTags } from './tags';
 
 const BACKUP_SUFFIX = '-BACKUP.json';
@@ -63,14 +72,9 @@ export function exportData(db: Database, backupDir: string, options: { onlyIfCha
       // An unreadable backup is no reason to skip a new one.
     }
   }
-  fs.mkdirSync(backupDir, { recursive: true });
-  const data: ExportFile = { app: 'folder-tagger-neo', version: 1, exportedAt: Date.now(), folders };
-  const file = path.join(backupDir, `${fileStamp()}${BACKUP_SUFFIX}`);
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-  return { file, count: folders.length };
+  const data: ExportFile = { app: APP_ID, version: 1, exportedAt: Date.now(), folders };
+  return { file: writeStampedJson(backupDir, BACKUP_SUFFIX, data), count: folders.length };
 }
-
-const TagNames = v.optional(v.array(v.string()), []);
 
 export const ImportSchema = v.object({
   folders: v.array(
@@ -81,22 +85,16 @@ export const ImportSchema = v.object({
       updatedAt: v.optional(v.number()),
       openCount: v.optional(v.number()),
       lastOpenedAt: v.optional(v.nullable(v.number())),
-      tags: v.optional(
-        v.object({ author: TagNames, parody: TagNames, character: TagNames, genre: TagNames, category: TagNames }),
-        {},
-      ),
+      tags: v.optional(TagMapSchema, {}),
     }),
   ),
 });
 
 export type ImportData = v.InferOutput<typeof ImportSchema>;
-export type ImportMode = 'append' | 'overwrite';
 export type ImportResult = { created: number; updated: number; failed: number; failedFile: string | null };
 
 const hasTags = (db: Database, folderId: number) =>
   db.query('SELECT 1 FROM folder_tags WHERE folder_id = ? LIMIT 1').get(folderId) !== null;
-
-const isDirectory = (folderPath: string) => fs.statSync(folderPath, { throwIfNoEntry: false })?.isDirectory() ?? false;
 
 /**
  * Imports a library export. Entries are matched to library folders by folder name, so
@@ -115,7 +113,7 @@ export function importData(db: Database, data: ImportData, mode: ImportMode, bac
 
   db.transaction(() => {
     for (const entry of data.folders) {
-      const name = entry.name ?? (path.basename(entry.path) || entry.path);
+      const name = entry.name ?? folderName(entry.path);
       const tags = normalizeTagMap(entry.tags);
       const match = (byName.get(foldKey(name)) as FolderRow | null) ?? findByPath(db, entry.path);
 
@@ -135,7 +133,7 @@ export function importData(db: Database, data: ImportData, mode: ImportMode, bac
         result.updated++;
       } else {
         setFolderTags(db, match.id, tags);
-        db.prepare(
+        db.query(
           'UPDATE folders SET created_at = ?, updated_at = ?, open_count = ?, last_opened_at = ? WHERE id = ?',
         ).run(
           entry.createdAt ?? match.created_at,
@@ -150,10 +148,8 @@ export function importData(db: Database, data: ImportData, mode: ImportMode, bac
   })();
 
   if (failures.length) {
-    fs.mkdirSync(backupDir, { recursive: true });
     result.failed = failures.length;
-    result.failedFile = path.join(backupDir, `${fileStamp()}${FAILED_SUFFIX}`);
-    fs.writeFileSync(result.failedFile, JSON.stringify(failures, null, 2));
+    result.failedFile = writeStampedJson(backupDir, FAILED_SUFFIX, failures);
   }
   return result;
 }

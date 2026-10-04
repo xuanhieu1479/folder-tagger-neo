@@ -1,19 +1,15 @@
 <script lang="ts">
+  import { refresh } from '$lib/actions';
   import { api, attempt, call } from '$lib/api';
   import { Button } from '$lib/components/ui/button';
   import * as Dialog from '$lib/components/ui/dialog';
-  import { library } from '$lib/state/library.svelte';
   import { ui } from '$lib/state/ui.svelte';
+  import { plural } from '$lib/utils';
+  import type { CleanupPlan } from '$server/services/cleanup';
   import { untrack } from 'svelte';
   import { toast } from 'svelte-sonner';
 
-  type Plan = {
-    missing: { id: number; name: string; path: string }[];
-    offline: { root: string; count: number }[];
-    thumbnails: { id: number; thumbnail: string | null }[];
-  };
-
-  let plan = $state<Plan | null>(null);
+  let plan = $state<CleanupPlan | null>(null);
   let working = $state(false);
 
   const nothingToDo = $derived(plan !== null && plan.missing.length === 0 && plan.thumbnails.length === 0);
@@ -40,11 +36,11 @@
     toast.success(`Removed ${result.removed} entries, updated ${result.thumbnailsUpdated} thumbnails.`);
     if (result.logFile) toast.info(`The removed paths are saved in ${result.logFile}`, { duration: 15000 });
     ui.cleanupOpen = false;
-    await library.load();
+    await refresh();
   }
 </script>
 
-<Dialog.Root open={ui.cleanupOpen} onOpenChange={open => !open && (ui.cleanupOpen = false)}>
+<Dialog.Root bind:open={ui.cleanupOpen}>
   <Dialog.Content class="sm:max-w-2xl">
     <Dialog.Header>
       <Dialog.Title>Clean Up Missing Folders</Dialog.Title>
@@ -60,7 +56,7 @@
         {#each plan.offline as drive (drive.root)}
           <p class="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2">
             <span class="font-medium">{drive.root}</span> can't be reached.
-            {drive.count} folder{drive.count === 1 ? '' : 's'} on it will be left alone.
+            {plural(drive.count, 'folder')} on it will be left alone.
           </p>
         {/each}
 

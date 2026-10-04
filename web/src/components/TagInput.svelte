@@ -6,6 +6,7 @@
   import CheckIcon from '@lucide/svelte/icons/check';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import XIcon from '@lucide/svelte/icons/x';
+  import type { Snippet } from 'svelte';
 
   type Props = {
     id: string;
@@ -104,6 +105,21 @@
   }
 </script>
 
+{#snippet option(index: number, content: Snippet)}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div
+    role="option"
+    tabindex="-1"
+    aria-selected={index === active}
+    data-index={index}
+    class={['flex cursor-default items-center gap-2 rounded-md px-2 py-1', index === active && 'bg-accent']}
+    onclick={() => pick(index)}
+    onmousemove={() => (active = index)}
+  >
+    {@render content()}
+  </div>
+{/snippet}
+
 <div class="relative">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div
@@ -161,34 +177,18 @@
       onmousedown={event => event.preventDefault()}
     >
       {#each rows as row, index (row.name)}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <div
-          role="option"
-          tabindex="-1"
-          aria-selected={index === active}
-          data-index={index}
-          class={['flex cursor-default items-center gap-2 rounded-md px-2 py-1', index === active && 'bg-accent']}
-          onclick={() => pick(index)}
-          onmousemove={() => (active = index)}
-        >
+        {#snippet existing()}
           <CheckIcon class={['size-3.5 shrink-0', !row.chosen && 'invisible']} />
           {row.name}
-        </div>
+        {/snippet}
+        {@render option(index, existing)}
       {/each}
       {#if canCreate}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <div
-          role="option"
-          tabindex="-1"
-          aria-selected={active === rows.length}
-          data-index={rows.length}
-          class={['flex cursor-default items-center gap-2 rounded-md px-2 py-1', active === rows.length && 'bg-accent']}
-          onclick={() => pick(rows.length)}
-          onmousemove={() => (active = rows.length)}
-        >
+        {#snippet create()}
           <PlusIcon class="size-3.5 shrink-0" />
           Create "{newName}" tag
-        </div>
+        {/snippet}
+        {@render option(rows.length, create)}
       {/if}
     </div>
   {/if}

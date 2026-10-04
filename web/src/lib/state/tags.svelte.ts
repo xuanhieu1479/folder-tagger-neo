@@ -1,5 +1,6 @@
 import { api, attempt, call } from '$lib/api';
 import {
+  DEFAULT_SETTINGS,
   emptyRelations,
   emptyTagMap,
   type Relations,
@@ -7,12 +8,12 @@ import {
   type TagCount,
   type TagMap,
 } from '$server/shared/types';
-import { DEFAULT_SETTINGS } from '$server/shared/types';
 
 /** Every tag in the library and what is known about which tags go together. */
 class Tags {
-  all = $state<TagCount[]>([]);
-  relations = $state<Relations>(emptyRelations());
+  // Both are only ever replaced whole, so they need no deep reactivity.
+  all = $state.raw<TagCount[]>([]);
+  relations = $state.raw<Relations>(emptyRelations());
 
   /** Tag names per type, most used first: the starting order for suggestions. */
   byType: TagMap = $derived.by(() => {
@@ -48,7 +49,7 @@ class SettingsStore {
   }
 
   async save(changes: Partial<Settings>): Promise<boolean> {
-    const saved = await attempt(() => call(api.settings.$put({ json: changes as never })));
+    const saved = await attempt(() => call(api.settings.$put({ json: changes })));
     if (saved) this.value = saved;
     return saved !== undefined;
   }

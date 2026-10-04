@@ -46,6 +46,7 @@
       src={thumbnailUrl(folder.id, folder.thumbnail)}
       alt=""
       loading="lazy"
+      decoding="async"
       draggable="false"
     />
   {:else}

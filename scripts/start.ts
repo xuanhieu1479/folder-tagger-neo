@@ -3,6 +3,8 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig, PROJECT_ROOT } from '../server/src/config';
+import { logDir } from '../server/src/context';
+import { APP_ID } from '../server/src/shared/types';
 
 const EDGE_PATHS = [
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -16,7 +18,7 @@ const url = `http://127.0.0.1:${config.port}`;
 async function isRunning(): Promise<boolean> {
   try {
     const response = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(1000) });
-    return ((await response.json()) as { app?: string }).app === 'folder-tagger-neo';
+    return ((await response.json()) as { app?: string }).app === APP_ID;
   } catch {
     return false;
   }
@@ -41,7 +43,7 @@ if (!(await isRunning())) {
   const deadline = Date.now() + START_TIMEOUT_MS;
   while (!(await isRunning())) {
     if (Date.now() > deadline) {
-      console.error(`The server did not start. Check the log files in ${path.join(config.dataDir, 'logs')}.`);
+      console.error(`The server did not start. Check the log files in ${logDir(config.dataDir)}.`);
       process.exit(1);
     }
     await Bun.sleep(150);

@@ -12,18 +12,18 @@ const EXIT_DELAY_MS = 4000;
 
 const config = loadConfig();
 const ctx: AppContext = {
-  db: openDatabase(path.join(config.dataDir, 'app.db'), path.join(config.dataDir, 'backups')),
+  db: openDatabase(path.join(config.dataDir, 'app.db'), backupDir(config.dataDir)),
   dataDir: config.dataDir,
 };
 const app = createApp(ctx);
 
-process.on('uncaughtException', error => logError(logDir(ctx), error, 'uncaughtException'));
-process.on('unhandledRejection', error => logError(logDir(ctx), error, 'unhandledRejection'));
+process.on('uncaughtException', error => logError(logDir(ctx.dataDir), error, 'uncaughtException'));
+process.on('unhandledRejection', error => logError(logDir(ctx.dataDir), error, 'unhandledRejection'));
 
 try {
-  exportData(ctx.db, backupDir(ctx), { onlyIfChanged: true });
+  exportData(ctx.db, backupDir(ctx.dataDir), { onlyIfChanged: true });
 } catch (error) {
-  logError(logDir(ctx), error, 'startup export');
+  logError(logDir(ctx.dataDir), error, 'startup export');
 }
 
 // Each open app window holds one connection to /api/alive. When the last one

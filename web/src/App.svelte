@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { api, attempt, call } from '$lib/api';
   import { Toaster } from '$lib/components/ui/sonner';
   import { library } from '$lib/state/library.svelte';
   import { settings, tags } from '$lib/state/tags.svelte';
@@ -20,14 +19,11 @@
   import TagDialog from './components/TagDialog.svelte';
 
   async function start() {
-    await Promise.all([settings.load(), tags.load(), tags.loadRelations()]);
-    library.size = settings.value.pageSize;
-    library.query = settings.value.defaultSearch;
-    if (settings.value.randomAtStartup) {
-      await attempt(() => call(api.folders.shuffle.$post()));
-      library.sort = 'random';
-    }
-    await library.search();
+    // The first page only needs the settings; the tag list loads alongside it.
+    void tags.load();
+    void tags.loadRelations();
+    await settings.load();
+    await library.start(settings.value);
   }
 
   onMount(() => {

@@ -6,10 +6,11 @@
   import { library } from '$lib/state/library.svelte';
   import { tags } from '$lib/state/tags.svelte';
   import { ui } from '$lib/state/ui.svelte';
+  import type { ImportMode } from '$server/shared/types';
   import { toast } from 'svelte-sonner';
 
   let files = $state<FileList | undefined>();
-  let mode = $state<'append' | 'overwrite'>('append');
+  let mode = $state<ImportMode>('append');
 
   const MODES = [
     { value: 'append', label: 'Append', detail: 'Only fills folders that have no tags yet.' },
@@ -38,12 +39,11 @@
       });
     ui.importOpen = false;
     files = undefined;
-    await tags.load();
-    await library.showNewest();
+    await Promise.all([tags.load(), library.showNewest()]);
   }
 </script>
 
-<Dialog.Root open={ui.importOpen} onOpenChange={open => !open && (ui.importOpen = false)}>
+<Dialog.Root bind:open={ui.importOpen}>
   <Dialog.Content class="sm:max-w-lg">
     <Dialog.Header>
       <Dialog.Title>Import Data</Dialog.Title>

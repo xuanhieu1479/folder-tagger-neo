@@ -15,3 +15,8 @@ export const jsonBody = <S extends Schema>(schema: S) =>
 
 export const queryParams = <S extends Schema>(schema: S) =>
   validator('query', (value): v.InferOutput<S> => parse(schema, value));
+
+const Names = v.optional(v.array(v.string()), []);
+
+/** Tag names per tag type; a type left out means no names. */
+export const TagMapSchema = v.object({ author: Names, parody: Names, character: Names, genre: Names, category: Names });

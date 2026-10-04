@@ -1,5 +1,6 @@
 <script lang="ts">
   import { imageUrl } from '$lib/api';
+  import { plural } from '$lib/utils';
   import { ui } from '$lib/state/ui.svelte';
   import XIcon from '@lucide/svelte/icons/x';
   import { SvelteSet } from 'svelte/reactivity';
@@ -30,7 +31,7 @@
   <div class="fixed inset-0 z-50 flex flex-col bg-black text-white" role="dialog" aria-label={reader.name}>
     <div class="flex h-10 shrink-0 items-center gap-3 bg-neutral-900 px-3 text-sm">
       <span class="truncate font-medium">{reader.name}</span>
-      <span class="shrink-0 text-neutral-400">{reader.count} image{reader.count === 1 ? '' : 's'}</span>
+      <span class="shrink-0 text-neutral-400">{plural(reader.count, 'image')}</span>
       <button
         type="button"
         class="ml-auto flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 hover:bg-neutral-700"

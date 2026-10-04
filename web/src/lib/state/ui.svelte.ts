@@ -1,4 +1,6 @@
-export type TagMode = 'add' | 'edit' | 'remove';
+import type { ApplyMode } from '$server/shared/types';
+
+export type TagMode = ApplyMode;
 
 type Confirmation = { title: string; description: string; action: string; resolve: (confirmed: boolean) => void };
 

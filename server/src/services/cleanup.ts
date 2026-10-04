@@ -1,10 +1,9 @@
 import type { Database } from 'bun:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileStamp } from '../time';
+import { writeStampedJson } from '../context';
+import type { FolderItem } from '../shared/types';
 import { findThumbnail } from './thumbnails';
-
-type Entry = { id: number; name: string; path: string; thumbnail: string | null };
 
 /** How clean-up looks at the disk; replaced by a fake in tests. */
 export type Probe = {
@@ -12,7 +11,7 @@ export type Probe = {
   findThumbnail(dir: string): string | null;
 };
 
-export const diskProbe: Probe = { exists: fs.existsSync, findThumbnail };
+const diskProbe: Probe = { exists: fs.existsSync, findThumbnail };
 
 export type CleanupPlan = {
   /** Folders that are gone from a drive that is connected. These can be removed. */
@@ -29,7 +28,7 @@ const CLEARED_SUFFIX = '-CLEARED.json';
  * Decides what clean-up would do. A folder only counts as missing when its drive is
  * reachable, so an unplugged drive never empties the library.
  */
-export function planCleanup(entries: Entry[], probe: Probe = diskProbe): CleanupPlan {
+export function planCleanup(entries: FolderItem[], probe: Probe = diskProbe): CleanupPlan {
   const plan: CleanupPlan = { missing: [], offline: [], thumbnails: [] };
   const online = new Map<string, boolean>();
   const offlineCounts = new Map<string, number>();
@@ -55,10 +54,9 @@ export function planCleanup(entries: Entry[], probe: Probe = diskProbe): Cleanup
 }
 
 const allEntries = (db: Database) =>
-  db.query('SELECT id, name, path, thumbnail FROM folders ORDER BY name_key').all() as Entry[];
+  db.query('SELECT id, name, path, thumbnail FROM folders ORDER BY name_key').all() as FolderItem[];
 
-export const previewCleanup = (db: Database, probe: Probe = diskProbe): CleanupPlan =>
-  planCleanup(allEntries(db), probe);
+export const previewCleanup = (db: Database): CleanupPlan => planCleanup(allEntries(db));
 
 export type CleanupResult = { removed: number; thumbnailsUpdated: number; logFile: string | null };
 
@@ -66,35 +64,24 @@ export type CleanupResult = { removed: number; thumbnailsUpdated: number; logFil
  * Removes the confirmed entries and updates thumbnails. The disk is checked again, so
  * an entry is only removed if it is still missing now.
  */
-export function applyCleanup(
-  db: Database,
-  removeIds: number[],
-  backupDir: string,
-  probe: Probe = diskProbe,
-): CleanupResult {
-  const plan = previewCleanup(db, probe);
+export function applyCleanup(db: Database, removeIds: number[], backupDir: string): CleanupResult {
+  const plan = previewCleanup(db);
   const confirmed = new Set(removeIds);
   const removable = plan.missing.filter(entry => confirmed.has(entry.id));
 
   db.transaction(() => {
-    const remove = db.prepare('DELETE FROM folders WHERE id = ?');
+    const remove = db.query('DELETE FROM folders WHERE id = ?');
     for (const entry of removable) remove.run(entry.id);
-    const setThumbnail = db.prepare('UPDATE folders SET thumbnail = ? WHERE id = ?');
+    const setThumbnail = db.query('UPDATE folders SET thumbnail = ? WHERE id = ?');
     for (const change of plan.thumbnails) setThumbnail.run(change.thumbnail, change.id);
   })();
 
-  let logFile: string | null = null;
-  if (removable.length) {
-    fs.mkdirSync(backupDir, { recursive: true });
-    logFile = path.join(backupDir, `${fileStamp()}${CLEARED_SUFFIX}`);
-    fs.writeFileSync(
-      logFile,
-      JSON.stringify(
+  const logFile = removable.length
+    ? writeStampedJson(
+        backupDir,
+        CLEARED_SUFFIX,
         removable.map(entry => entry.path),
-        null,
-        2,
-      ),
-    );
-  }
+      )
+    : null;
   return { removed: removable.length, thumbnailsUpdated: plan.thumbnails.length, logFile };
 }

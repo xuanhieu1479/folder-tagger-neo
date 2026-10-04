@@ -4,6 +4,9 @@ import { toast } from 'svelte-sonner';
 
 export const api = hc<AppType>('/').api;
 
+/** The route parameter of the /folders/:id endpoints. */
+export const idParam = (id: number) => ({ param: { id: String(id) } });
+
 /** Awaits an API call and returns its JSON, throwing the server's message on failure. */
 export async function call<T>(request: Promise<{ ok: boolean; json(): Promise<T> }>): Promise<T> {
   const response = await request;

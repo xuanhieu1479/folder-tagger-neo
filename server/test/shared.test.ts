@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { naturalCompare } from '../src/shared/naturalSort';
 import { findNearDuplicates } from '../src/shared/nearDuplicate';
 import { foldKey, normalizeTagName, pathKey, wordsKey } from '../src/shared/normalize';
+import { classifyTagChange } from '../src/shared/tagChange';
 
 describe('normalizeTagName', () => {
   test.each([
@@ -62,5 +63,20 @@ describe('findNearDuplicates', () => {
   test('an identical or unrelated name is not a near duplicate', () => {
     expect(findNearDuplicates('kimono', existing)).toEqual([]);
     expect(findNearDuplicates('swimsuit', existing)).toEqual([]);
+  });
+});
+
+describe('classifyTagChange', () => {
+  const exists = (name: string) => name === 'iron man';
+
+  test.each([
+    ['foo', ' Delete ', { kind: 'delete' }],
+    ['foo', 'Iron Man!', { kind: 'merge', name: 'iron man' }],
+    ['foo', 'Bar', { kind: 'rename', name: 'bar' }],
+    ['foo', 'Foo!', null],
+    ['foo', '  ', null],
+    ['foo', '!!!', null],
+  ])('%p -> %p is %p', (from, to, expected) => {
+    expect(classifyTagChange(from, to, exists)).toEqual(expected as ReturnType<typeof classifyTagChange>);
   });
 });

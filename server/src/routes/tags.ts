@@ -3,15 +3,12 @@ import * as v from 'valibot';
 import type { AppContext } from '../context';
 import { calculateRelations, getRelations } from '../services/relations';
 import { applyTags, clearFolderTags, clearUnusedTags, listTags, manageTags } from '../services/tags';
-import { TAG_TYPES } from '../shared/types';
-import { jsonBody } from '../validate';
-
-const Names = v.optional(v.array(v.string()), []);
-const TagMapSchema = v.object({ author: Names, parody: Names, character: Names, genre: Names, category: Names });
+import { APPLY_MODES, TAG_TYPES } from '../shared/types';
+import { jsonBody, TagMapSchema } from '../validate';
 
 const ApplySchema = v.object({
   folderIds: v.array(v.number()),
-  mode: v.picklist(['add', 'edit', 'remove']),
+  mode: v.picklist(APPLY_MODES),
   tags: TagMapSchema,
 });
 

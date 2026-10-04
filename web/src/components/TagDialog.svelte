@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { api, attempt, call } from '$lib/api';
+  import { refresh } from '$lib/actions';
+  import { api, attempt, call, idParam } from '$lib/api';
   import { Button } from '$lib/components/ui/button';
   import * as Dialog from '$lib/components/ui/dialog';
   import { Label } from '$lib/components/ui/label';
@@ -35,13 +36,13 @@
     untrack(() => {
       mode = opened;
       folderIds = [...library.selected];
-      form = { selected: emptyTagMap(), order: structuredClone($state.snapshot(tags.byType)) };
+      form = { selected: emptyTagMap(), order: structuredClone(tags.byType) };
       if (opened === 'edit') void loadCurrentTags(folderIds[0]!);
     });
   });
 
   async function loadCurrentTags(id: number) {
-    const current = await attempt(() => call(api.folders[':id'].tags.$get({ param: { id: String(id) } })));
+    const current = await attempt(() => call(api.folders[':id'].tags.$get(idParam(id))));
     if (current) form.selected = current;
   }
 
@@ -59,7 +60,7 @@
     if (!saved) return;
     toast.success('Success');
     ui.tagDialog = null;
-    await Promise.all([tags.load(), library.load()]);
+    await refresh();
   }
 </script>
 

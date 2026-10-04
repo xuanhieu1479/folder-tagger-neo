@@ -1,11 +1,16 @@
-import { api, attempt, call } from '$lib/api';
+import { api, attempt, call, idParam } from '$lib/api';
 import { library } from '$lib/state/library.svelte';
 import { tags } from '$lib/state/tags.svelte';
 import { ui } from '$lib/state/ui.svelte';
+import { plural } from '$lib/utils';
 import { toast } from 'svelte-sonner';
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
-const idParam = (id: number) => ({ param: { id: String(id) } });
+/** Reloads the tag list and the current page. Call after anything that changes folders or tags. */
+export const refresh = () => Promise.all([tags.load(), library.load()]);
+
+/** True when the action may go ahead: one folder needs no question, several ask first. */
+const confirmSeveral = async (ids: number[], title: string, description: string, action: string) =>
+  ids.length <= 1 || (await ui.confirm(title, description, action));
 
 /** Shows the Windows folder dialog and adds what was chosen. */
 export async function addFolders(multi: boolean): Promise<void> {
@@ -32,36 +37,32 @@ export async function openInExplorer(id: number): Promise<void> {
 
 /** Removes folders from the library (not from disk). Asks first when there are several. */
 export async function removeFromLibrary(ids: number[]): Promise<void> {
-  if (
-    ids.length > 1 &&
-    !(await ui.confirm(
-      `Remove ${ids.length} folders from the library?`,
-      'Their tags are removed with them. The folders on disk are not touched.',
-      'Remove',
-    ))
-  )
-    return;
+  const confirmed = await confirmSeveral(
+    ids,
+    `Remove ${ids.length} folders from the library?`,
+    'Their tags are removed with them. The folders on disk are not touched.',
+    'Remove',
+  );
+  if (!confirmed) return;
   const result = await attempt(() => call(api.folders.remove.$post({ json: { ids } })));
   if (!result) return;
   toast.success(`Removed ${plural(result.removed, 'folder')} from the library.`);
-  await library.load();
+  await refresh();
 }
 
 /** Removes every tag from the folders. Asks first when there are several. */
 export async function removeAllTags(ids: number[]): Promise<void> {
-  if (
-    ids.length > 1 &&
-    !(await ui.confirm(
-      `Remove all tags from ${ids.length} folders?`,
-      'Every tag on these folders is removed.',
-      'Remove tags',
-    ))
-  )
-    return;
+  const confirmed = await confirmSeveral(
+    ids,
+    `Remove all tags from ${ids.length} folders?`,
+    'Every tag on these folders is removed.',
+    'Remove tags',
+  );
+  if (!confirmed) return;
   const result = await attempt(() => call(api.tags['clear-folders'].$post({ json: { folderIds: ids } })));
   if (!result) return;
   toast.success('Success');
-  await Promise.all([tags.load(), library.load()]);
+  await refresh();
 }
 
 export async function calculateRelations(): Promise<void> {

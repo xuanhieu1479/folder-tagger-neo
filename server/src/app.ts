@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { logDir, type AppContext } from './context';
 import { HttpError } from './errors';
+import { APP_ID } from './shared/types';
 import { logError } from './log';
 import { folderRoutes } from './routes/folders';
 import { maintenanceRoutes } from './routes/maintenance';
@@ -11,12 +12,12 @@ export function createApp(ctx: AppContext) {
 
   app.onError((error, c) => {
     if (error instanceof HttpError) return c.json({ message: error.message }, error.status);
-    logError(logDir(ctx), error, `${c.req.method} ${c.req.path}`);
+    logError(logDir(ctx.dataDir), error, `${c.req.method} ${c.req.path}`);
     return c.json({ message: error.message || 'Something went wrong.' }, 500);
   });
 
   return app
-    .get('/health', c => c.json({ ok: true, app: 'folder-tagger-neo' }))
+    .get('/health', c => c.json({ ok: true, app: APP_ID }))
     .route('/folders', folderRoutes(ctx))
     .route('/tags', tagRoutes(ctx))
     .route('/relations', relationRoutes(ctx))

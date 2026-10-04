@@ -21,16 +21,15 @@ import { jsonBody, queryParams } from '../validate';
 
 const PICKER_DIR_KEY = 'pickerDir';
 
-const numberText = (fallback: number) =>
-  v.pipe(v.optional(v.string(), String(fallback)), v.transform(Number), v.integer(), v.minValue(1));
+const numberText = (fallback: number) => v.pipe(v.optional(v.string(), String(fallback)), v.transform(Number));
 
 const ListQuery = v.object({
   q: v.optional(v.string(), ''),
   category: v.optional(v.string()),
   noCategory: v.optional(v.string()),
   sort: v.optional(v.picklist(SORTS), 'alpha'),
-  page: numberText(1),
-  size: numberText(PAGE_SIZES[0]),
+  page: v.pipe(numberText(1), v.integer(), v.minValue(1)),
+  size: v.pipe(numberText(PAGE_SIZES[0]), v.picklist(PAGE_SIZES)),
 });
 
 const Ids = v.object({ ids: v.array(v.number()) });
@@ -44,8 +43,7 @@ export const folderRoutes = (ctx: AppContext) =>
   new Hono()
     .get('/', queryParams(ListQuery), c => {
       const query = c.req.valid('query');
-      const size = Math.min(query.size, PAGE_SIZES.at(-1)!);
-      return c.json(listFolders(ctx.db, { ...query, size, noCategory: query.noCategory === '1' }));
+      return c.json(listFolders(ctx.db, { ...query, noCategory: query.noCategory === '1' }));
     })
     .post('/', jsonBody(v.object({ paths: v.array(v.string()) })), c =>
       c.json(addFolders(ctx.db, c.req.valid('json').paths)),
