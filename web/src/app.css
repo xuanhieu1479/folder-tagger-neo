@@ -126,4 +126,8 @@
 	html {
 		@apply font-sans;
 	}
+	/* The list of a native <select> does not take the page colours by itself. */
+	option {
+		@apply bg-popover text-popover-foreground;
+	}
 }
