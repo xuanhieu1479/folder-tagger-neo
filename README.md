@@ -37,5 +37,4 @@ The (i) button in the search box lists the syntax. In short: plain words match t
 
 ## Not done yet
 
-- Importing the old app's data (its export format differs).
 - Keyboard shortcuts beyond the arrow keys in the grid and the tag box.

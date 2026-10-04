@@ -127,6 +127,48 @@ describe('import', () => {
     expect(getFolder(db, id)).toMatchObject({ created_at: 111, updated_at: 223, open_count: 7, last_opened_at: 333 });
   });
 
+  test("the old app's export is read: Category becomes a tag, Language is dropped", () => {
+    const first = makeFolder(root, 'old one', ['1.png']);
+    const second = makeFolder(root, 'old two', ['1.png']);
+    const old = [
+      {
+        FolderLocation: first,
+        FolderName: 'old one',
+        Category: 'manga',
+        Language: 'japanese',
+        CreatedAt: 1000,
+        UpdatedAt: null,
+        Tags: { author: ['Ann'], parody: [], character: [], genre: ['School Girl'] },
+      },
+      {
+        FolderLocation: second,
+        FolderName: 'old two',
+        Category: null,
+        Language: null,
+        CreatedAt: 2000,
+        UpdatedAt: 3000,
+        Tags: { author: [], parody: [], character: [], genre: [] },
+      },
+    ];
+    const result = importData(db, v.parse(ImportSchema, old), 'append', backups);
+    expect(result).toMatchObject({ created: 2, failed: 0 });
+
+    const rows = db.query('SELECT id, name, created_at, updated_at FROM folders ORDER BY name').all() as {
+      id: number;
+    }[];
+    expect(rows).toMatchObject([
+      { name: 'old one', created_at: 1000, updated_at: 1000 },
+      { name: 'old two', created_at: 2000, updated_at: 3000 },
+    ]);
+    expect(folderTags(db, rows[0]!.id)).toEqual({
+      ...emptyTagMap(),
+      author: ['ann'],
+      genre: ['school girl'],
+      category: ['manga'],
+    });
+    expect(folderTags(db, rows[1]!.id)).toEqual(emptyTagMap());
+  });
+
   test('entries that cannot be imported are written to an IMPORT-FAILED file', () => {
     seedFolder(db, { name: 'Tagged', tags: { author: ['keep'] } });
     const result = importData(

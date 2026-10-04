@@ -79,7 +79,7 @@ export function exportData(db: Database, backupDir: string, options: { onlyIfCha
 /** The database only stores whole numbers; one fractional value would fail the whole import. */
 const Whole = v.pipe(v.number(), v.transform(Math.round), v.safeInteger());
 
-export const ImportSchema = v.object({
+const NewExportSchema = v.object({
   folders: v.array(
     v.object({
       path: v.string(),
@@ -93,7 +93,37 @@ export const ImportSchema = v.object({
   ),
 });
 
-export type ImportData = v.InferOutput<typeof ImportSchema>;
+export type ImportData = v.InferOutput<typeof NewExportSchema>;
+
+/**
+ * The export of the old Electron app: a bare list of folders. Its Category becomes a
+ * category tag and its Language is dropped.
+ */
+const OldExportSchema = v.pipe(
+  v.array(
+    v.object({
+      FolderLocation: v.string(),
+      FolderName: v.optional(v.string()),
+      Category: v.nullish(v.string()),
+      CreatedAt: v.nullish(Whole),
+      UpdatedAt: v.nullish(Whole),
+      Tags: v.optional(TagMapSchema, {}),
+    }),
+  ),
+  v.transform((folders): ImportData => ({
+    folders: folders.map(old => ({
+      path: old.FolderLocation,
+      name: old.FolderName,
+      createdAt: old.CreatedAt ?? undefined,
+      // The old app left UpdatedAt empty until the first edit.
+      updatedAt: old.UpdatedAt ?? old.CreatedAt ?? undefined,
+      tags: { ...old.Tags, category: old.Category ? [old.Category] : [] },
+    })),
+  })),
+);
+
+/** A library export, of this app or of the old one. */
+export const ImportSchema = v.union([NewExportSchema, OldExportSchema]);
 export type ImportResult = { created: number; updated: number; failed: number; failedFile: string | null };
 
 const hasTags = (db: Database, folderId: number) =>

@@ -48,7 +48,8 @@
     <Dialog.Header>
       <Dialog.Title>Import Data</Dialog.Title>
       <Dialog.Description>
-        Choose a file made by Export. Folders are matched by folder name, so folders that were moved still match.
+        Choose a file made by Export, here or in the old Folder Tagger. Folders are matched by folder name, so folders
+        that were moved still match.
       </Dialog.Description>
     </Dialog.Header>
 
