@@ -1,3 +1,4 @@
+import { jumpTarget, viewAnchor } from '../src/lib/readerNav';
 import { describe, expect, test } from 'bun:test';
 import { emptyRelations, emptyTagMap, type Relations } from '../../server/src/shared/types';
 import { countColumns, nextIndex } from '../src/lib/gridNav';
@@ -201,5 +202,32 @@ describe('filterSuggestions', () => {
     const rows = filterSuggestions(many, ['ai'], 'ai');
     expect(rows).toHaveLength(100);
     expect(rows[0]).toEqual({ name: 'ai', chosen: true });
+  });
+});
+
+describe('reader navigation', () => {
+  const tops = [0, 1000, 2500, 3000];
+
+  test('right goes to the next image', () => {
+    expect(jumpTarget(tops, 0, 1)).toBe(1);
+    expect(jumpTarget(tops, 400, 1)).toBe(1);
+    expect(jumpTarget(tops, 1000, 1)).toBe(2);
+    expect(jumpTarget(tops, 1000.5, 1)).toBe(2);
+    expect(jumpTarget(tops, 3000, 1)).toBeNull();
+  });
+
+  test('left goes to the previous image, or to the top of the one being read', () => {
+    expect(jumpTarget(tops, 1000, -1)).toBe(0);
+    expect(jumpTarget(tops, 1400, -1)).toBe(1);
+    expect(jumpTarget(tops, 3000, -1)).toBe(2);
+    expect(jumpTarget(tops, 0, -1)).toBeNull();
+  });
+
+  test('the place in an image is found again after the scale changes', () => {
+    const heights = [1000, 1500, 500, 800];
+    expect(viewAnchor(tops, heights, 0)).toEqual({ index: 0, ratio: 0 });
+    expect(viewAnchor(tops, heights, 1750)).toEqual({ index: 1, ratio: 0.5 });
+    expect(viewAnchor(tops, heights, 3200)).toEqual({ index: 3, ratio: 0.25 });
+    expect(viewAnchor([], [], 0)).toEqual({ index: 0, ratio: 0 });
   });
 });

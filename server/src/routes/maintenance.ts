@@ -4,7 +4,7 @@ import { backupDir, thumbDir, type AppContext } from '../context';
 import { applyCleanup, previewCleanup } from '../services/cleanup';
 import { getSettings, saveSettings } from '../services/settings';
 import { exportData, importData, ImportSchema } from '../services/transfer';
-import { IMPORT_MODES, PAGE_SIZES } from '../shared/types';
+import { IMPORT_MODES, PAGE_SIZES, READER_SCALE } from '../shared/types';
 import { jsonBody } from '../validate';
 
 const ImportBody = v.object({ mode: v.picklist(IMPORT_MODES), data: ImportSchema });
@@ -14,6 +14,7 @@ const SettingsSchema = v.partial(
     defaultSearch: v.string(),
     randomAtStartup: v.boolean(),
     pageSize: v.picklist(PAGE_SIZES),
+    readerScale: v.pipe(v.number(), v.integer(), v.minValue(READER_SCALE.min), v.maxValue(READER_SCALE.max)),
   }),
 );
 

@@ -47,13 +47,23 @@ export const emptyRelations = (): Relations => ({
 export const own = <T>(map: Record<string, T>, name: string): T | undefined =>
   Object.hasOwn(map, name) ? map[name] : undefined;
 
+/** The image size in the reader, in percent. */
+export const READER_SCALE = { min: 50, max: 200, step: 10 } as const;
+
 export type Settings = {
   defaultSearch: string;
   randomAtStartup: boolean;
   pageSize: PageSize;
+  /** The reader's scale when it was last used. */
+  readerScale: number;
 };
 
-export const DEFAULT_SETTINGS: Settings = { defaultSearch: '', randomAtStartup: false, pageSize: 25 };
+export const DEFAULT_SETTINGS: Settings = {
+  defaultSearch: '',
+  randomAtStartup: false,
+  pageSize: 25,
+  readerScale: 100,
+};
 
 export type FolderItem = { id: number; name: string; path: string; thumbnail: string | null };
 

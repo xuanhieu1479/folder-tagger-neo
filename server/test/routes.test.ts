@@ -142,12 +142,20 @@ describe('maintenance', () => {
   });
 
   test('settings', async () => {
-    expect(await json(get('/settings'))).toEqual({ defaultSearch: '', randomAtStartup: false, pageSize: 25 });
+    expect(await json(get('/settings'))).toEqual({
+      defaultSearch: '',
+      randomAtStartup: false,
+      pageSize: 25,
+      readerScale: 100,
+    });
     expect(await json(send('/settings', { pageSize: 50, defaultSearch: 'no_author' }, 'PUT'))).toEqual({
       defaultSearch: 'no_author',
       randomAtStartup: false,
       pageSize: 50,
+      readerScale: 100,
     });
     expect((await send('/settings', { pageSize: 33 }, 'PUT')).status).toBe(400);
+    expect(await json(send('/settings', { readerScale: 150 }, 'PUT'))).toMatchObject({ readerScale: 150 });
+    expect((await send('/settings', { readerScale: 250 }, 'PUT')).status).toBe(400);
   });
 });

@@ -316,11 +316,12 @@ describe('reader', () => {
 });
 
 test('settings have defaults and keep what is saved', () => {
-  expect(getSettings(db)).toEqual({ defaultSearch: '', randomAtStartup: false, pageSize: 25 });
+  expect(getSettings(db)).toEqual({ defaultSearch: '', randomAtStartup: false, pageSize: 25, readerScale: 100 });
   saveSettings(db, { defaultSearch: 'category:manga' });
   expect(saveSettings(db, { randomAtStartup: true })).toEqual({
     defaultSearch: 'category:manga',
     randomAtStartup: true,
     pageSize: 25,
+    readerScale: 100,
   });
 });
