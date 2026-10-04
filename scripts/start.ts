@@ -24,18 +24,28 @@ async function isRunning(): Promise<boolean> {
   }
 }
 
-/** When the server's code last changed. */
-function codeChangedAt(): number {
-  const dir = path.join(PROJECT_ROOT, 'server', 'src');
+const SERVER_SRC = path.join(PROJECT_ROOT, 'server', 'src');
+const WEB_SRC = path.join(PROJECT_ROOT, 'web', 'src');
+
+/** When the code in a folder last changed. */
+function codeChangedAt(dir: string): number {
   const files = fs.readdirSync(dir, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile());
   return Math.max(...files.map(file => fs.statSync(path.join(file.parentPath, file.name)).mtimeMs));
+}
+
+/** True when the web app was never built, or was built before its code last changed. */
+function webBuildOutdated(): boolean {
+  const index = path.join(config.webDist, 'index.html');
+  if (!fs.existsSync(index)) return true;
+  // The web app also uses the server's shared code.
+  return fs.statSync(index).mtimeMs < Math.max(codeChangedAt(WEB_SRC), codeChangedAt(SERVER_SRC));
 }
 
 /** Stops a running server that was started before its code last changed. */
 async function stopOutdatedServer(): Promise<void> {
   const response = await fetch(`${url}/api/server`, { signal: AbortSignal.timeout(1000) });
   const startedAt = response.ok ? ((await response.json()) as { startedAt: number }).startedAt : 0;
-  if (startedAt >= codeChangedAt()) return;
+  if (startedAt >= codeChangedAt(SERVER_SRC)) return;
   await fetch(`${url}/api/quit`, { method: 'POST', signal: AbortSignal.timeout(1000) });
   const deadline = Date.now() + 5000;
   while (await isRunning()) {
@@ -50,18 +60,20 @@ async function stopOutdatedServer(): Promise<void> {
 const detached = (command: string, args: string[], env = process.env) =>
   spawn(command, args, { cwd: PROJECT_ROOT, env, detached: true, windowsHide: true, stdio: 'ignore' }).unref();
 
+// The server reads the built files on each request, so a running server shows a new build too.
+if (webBuildOutdated()) {
+  console.log('Building the web app...');
+  const build = Bun.spawnSync([process.execPath, 'run', 'build'], {
+    cwd: PROJECT_ROOT,
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+  if (build.exitCode !== 0) process.exit(build.exitCode ?? 1);
+}
+
 if (await isRunning()) await stopOutdatedServer();
 
 if (!(await isRunning())) {
-  if (!fs.existsSync(path.join(config.webDist, 'index.html'))) {
-    console.log('Building the web app (first start only)...');
-    const build = Bun.spawnSync([process.execPath, 'run', 'build'], {
-      cwd: PROJECT_ROOT,
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
-    if (build.exitCode !== 0) process.exit(build.exitCode ?? 1);
-  }
   // The server stops by itself a few seconds after the app window closes.
   detached(process.execPath, [path.join('server', 'src', 'main.ts')], { ...process.env, FT_EXIT_WHEN_IDLE: '1' });
 
