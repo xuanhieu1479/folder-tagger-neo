@@ -17,6 +17,8 @@ export type Relations = {
   author_parody: Record<string, string[]>;
   author_genre: Record<string, string[]>;
   author_category: Record<string, string[]>;
+  /** The parody each character is most often seen with. */
+  character_parody: Record<string, string>;
 };
 
 export const emptyRelations = (): Relations => ({
@@ -24,6 +26,7 @@ export const emptyRelations = (): Relations => ({
   author_parody: {},
   author_genre: {},
   author_category: {},
+  character_parody: {},
 });
 
 export type Settings = {

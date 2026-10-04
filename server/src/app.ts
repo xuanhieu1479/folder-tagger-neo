@@ -1,15 +1,26 @@
 import { Hono } from 'hono';
+import { logDir, type AppContext } from './context';
 import { HttpError } from './errors';
+import { logError } from './log';
+import { folderRoutes } from './routes/folders';
+import { maintenanceRoutes } from './routes/maintenance';
+import { relationRoutes, tagRoutes } from './routes/tags';
 
-export function createApp() {
+export function createApp(ctx: AppContext) {
   const app = new Hono().basePath('/api');
 
   app.onError((error, c) => {
     if (error instanceof HttpError) return c.json({ message: error.message }, error.status);
-    return c.json({ message: error.message }, 500);
+    logError(logDir(ctx), error, `${c.req.method} ${c.req.path}`);
+    return c.json({ message: error.message || 'Something went wrong.' }, 500);
   });
 
-  return app.get('/health', c => c.json({ ok: true }));
+  return app
+    .get('/health', c => c.json({ ok: true, app: 'folder-tagger-neo' }))
+    .route('/folders', folderRoutes(ctx))
+    .route('/tags', tagRoutes(ctx))
+    .route('/relations', relationRoutes(ctx))
+    .route('/', maintenanceRoutes(ctx));
 }
 
 export type AppType = ReturnType<typeof createApp>;
