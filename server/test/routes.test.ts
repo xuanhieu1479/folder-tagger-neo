@@ -66,8 +66,12 @@ describe('folders', () => {
 
     const thumbnail = await get(`/folders/${id}/thumbnail`);
     expect(thumbnail.status).toBe(200);
-    expect(thumbnail.headers.get('content-type')).toBe('image/png');
-    expect(Buffer.from(await thumbnail.arrayBuffer()).equals(PNG)).toBe(true);
+    expect(thumbnail.headers.get('content-type')).toBe('image/webp');
+    expect(
+      Buffer.from(await thumbnail.arrayBuffer())
+        .subarray(8, 12)
+        .toString(),
+    ).toBe('WEBP');
 
     expect(await json(send(`/folders/${id}/read`))).toEqual({ name: 'テスト 100% #1', count: 2 });
     expect((await get(`/folders/${id}/images/1`)).status).toBe(200);

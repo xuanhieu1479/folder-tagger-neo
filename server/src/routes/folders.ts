@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import path from 'node:path';
 import * as v from 'valibot';
-import { numberParam, type AppContext } from '../context';
+import { numberParam, thumbDir, type AppContext } from '../context';
 import { getJson, setJson } from '../db/open';
 import { HttpError } from '../errors';
 import {
@@ -16,6 +16,7 @@ import {
 import { openInExplorer, pickFolders } from '../services/os';
 import { imagePath, openReader } from '../services/reader';
 import { folderTags } from '../services/tags';
+import { smallThumbnail } from '../services/thumbnails';
 import { PAGE_SIZES, SORTS } from '../shared/types';
 import { jsonBody, queryParams } from '../validate';
 
@@ -69,11 +70,12 @@ export const folderRoutes = (ctx: AppContext) =>
       return c.json({ ok: true });
     })
     .get('/:id/tags', c => c.json(folderTags(ctx.db, numberParam(c, 'id'))))
-    .get('/:id/thumbnail', c => {
+    .get('/:id/thumbnail', async c => {
       const folder = getFolder(ctx.db, numberParam(c, 'id'));
       if (!folder.thumbnail) throw new HttpError(404, 'This folder has no thumbnail.');
+      const small = await smallThumbnail(path.join(folder.path, folder.thumbnail), thumbDir(ctx.dataDir));
       // The URL carries the file name as a version, so a changed thumbnail gets a new URL.
-      return imageResponse(path.join(folder.path, folder.thumbnail), 86400);
+      return imageResponse(small, 86400);
     })
     .post('/:id/read', c => c.json(openReader(ctx.db, numberParam(c, 'id'))))
     .get('/:id/images/:index', c =>

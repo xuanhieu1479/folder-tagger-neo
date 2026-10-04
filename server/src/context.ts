@@ -13,6 +13,7 @@ export type AppContext = {
 
 export const backupDir = (dataDir: string) => path.join(dataDir, 'backups');
 export const logDir = (dataDir: string) => path.join(dataDir, 'logs');
+export const thumbDir = (dataDir: string) => path.join(dataDir, 'thumbs');
 
 /** Writes `data` as JSON to a new file named after the current time plus `suffix`, and returns its path. */
 export function writeStampedJson(dir: string, suffix: string, data: unknown): string {

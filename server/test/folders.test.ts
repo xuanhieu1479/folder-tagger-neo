@@ -2,11 +2,12 @@ import type { Database } from 'bun:sqlite';
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
+import sharp from 'sharp';
 import { MIGRATIONS, migrate, schemaVersion } from '../src/db/migrations';
 import { getJson, openDatabase, setJson } from '../src/db/open';
 import { addFolders, getFolder, listFolders, markOpened, removeFolders, renameFolder } from '../src/services/folders';
 import { applyTags, folderTags } from '../src/services/tags';
-import { findThumbnail } from '../src/services/thumbnails';
+import { findThumbnail, smallThumbnail } from '../src/services/thumbnails';
 import { makeFolder, memoryDb, tempDir } from './fixtures';
 
 const tmp = tempDir('folders');
@@ -69,6 +70,69 @@ describe('findThumbnail', () => {
   test('none for a folder without images, or one that is missing', () => {
     expect(findThumbnail(makeFolder(root, 'c', ['notes.txt']))).toBeNull();
     expect(findThumbnail(path.join(root, 'does-not-exist'))).toBeNull();
+  });
+});
+
+describe('smallThumbnail', () => {
+  const bigPng = (width: number, height: number) =>
+    sharp({ create: { width, height, channels: 3, background: '#a33' } })
+      .png()
+      .toBuffer();
+
+  test('makes a 500px wide WebP copy and reuses it', async () => {
+    const dir = makeFolder(root, 'テスト 100% #1');
+    const source = path.join(dir, '元 画像.png');
+    fs.writeFileSync(source, await bigPng(1200, 1800));
+    const cache = path.join(root, 'thumbs');
+
+    const small = await smallThumbnail(source, cache);
+    expect(path.dirname(small)).toBe(cache);
+    expect(await sharp(fs.readFileSync(small)).metadata()).toMatchObject({ format: 'webp', width: 500, height: 750 });
+
+    const made = fs.statSync(small).mtimeMs;
+    expect(await smallThumbnail(source, cache)).toBe(small);
+    expect(fs.statSync(small).mtimeMs).toBe(made);
+    expect(fs.readdirSync(cache)).toHaveLength(1);
+  });
+
+  test('the folder can be renamed right after', async () => {
+    const dir = makeFolder(root, 'before');
+    fs.writeFileSync(path.join(dir, '1.png'), await bigPng(800, 800));
+    await smallThumbnail(path.join(dir, '1.png'), path.join(root, 'thumbs'));
+    fs.renameSync(dir, path.join(root, 'after'));
+    expect(fs.existsSync(path.join(root, 'after', '1.png'))).toBe(true);
+  });
+
+  test('a changed image gets a new copy', async () => {
+    const dir = makeFolder(root, 'changed');
+    const source = path.join(dir, '1.png');
+    const cache = path.join(root, 'thumbs');
+    fs.writeFileSync(source, await bigPng(800, 800));
+    const first = await smallThumbnail(source, cache);
+    fs.writeFileSync(source, await bigPng(900, 600));
+    const second = await smallThumbnail(source, cache);
+    expect(second).not.toBe(first);
+    expect(await sharp(fs.readFileSync(second)).metadata()).toMatchObject({ width: 500, height: 333 });
+  });
+
+  test('a small image is not enlarged', async () => {
+    const dir = makeFolder(root, 'small');
+    fs.writeFileSync(path.join(dir, '1.png'), await bigPng(200, 100));
+    const small = await smallThumbnail(path.join(dir, '1.png'), path.join(root, 'thumbs'));
+    expect(await sharp(fs.readFileSync(small)).metadata()).toMatchObject({ width: 200, height: 100 });
+  });
+
+  test('a file that is not an image is served as it is', async () => {
+    const dir = makeFolder(root, 'broken');
+    const source = path.join(dir, '1.jpg');
+    fs.writeFileSync(source, 'not an image');
+    expect(await smallThumbnail(source, path.join(root, 'thumbs'))).toBe(source);
+  });
+
+  test('a missing file is a 404', () => {
+    expect(smallThumbnail(path.join(root, 'nope.png'), path.join(root, 'thumbs'))).rejects.toMatchObject({
+      status: 404,
+    });
   });
 });
 
