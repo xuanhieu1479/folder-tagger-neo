@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { openReader } from '$lib/actions';
   import { copyText, thumbnailUrl } from '$lib/api';
   import { library } from '$lib/state/library.svelte';
   import { clickSelection, contextSelection } from '$lib/selectionLogic';
@@ -37,7 +36,6 @@
     selected && 'outline-2 outline-sky-500',
   ]}
   onclick={select}
-  ondblclick={() => openReader(folder.id)}
   oncontextmenu={() => (library.selected = contextSelection(library.selected, folder.id))}
 >
   {#if folder.thumbnail}
