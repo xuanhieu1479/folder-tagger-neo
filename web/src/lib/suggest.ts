@@ -60,14 +60,18 @@ export type SuggestionRow = { name: string; chosen: boolean };
 /** How many suggestions are shown at once. */
 export const MAX_SUGGESTIONS = 100;
 
-/** Suggestions containing the typed text, in their given order. */
+/**
+ * Suggestions containing the typed text, in their given order. A tag typed in full
+ * comes first, so Enter picks it.
+ */
 export function filterSuggestions(order: string[], chosen: string[], typed: string): SuggestionRow[] {
   const query = normalizeTagName(typed);
   const rows: SuggestionRow[] = [];
+  const add = (name: string) => rows.push({ name, chosen: chosen.includes(name) });
+  if (order.includes(query)) add(query);
   for (const name of order) {
-    if (!name.includes(query)) continue;
-    rows.push({ name, chosen: chosen.includes(name) });
     if (rows.length === MAX_SUGGESTIONS) break;
+    if (name !== query && name.includes(query)) add(name);
   }
   return rows;
 }

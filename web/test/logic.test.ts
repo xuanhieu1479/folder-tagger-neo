@@ -189,4 +189,12 @@ describe('filterSuggestions', () => {
     expect(filterSuggestions(order, [], 'Sci-Fi!').map(r => r.name)).toEqual(['sci-fi']);
     expect(filterSuggestions(order, [], 'zzz')).toEqual([]);
   });
+
+  test('a tag typed in full comes first', () => {
+    expect(filterSuggestions(order, [], 'Sister').map(r => r.name)).toEqual(['sister', 'big sister']);
+    const many = [...Array.from({ length: 150 }, (_, i) => `kai ${i}`), 'ai'];
+    const rows = filterSuggestions(many, ['ai'], 'ai');
+    expect(rows).toHaveLength(100);
+    expect(rows[0]).toEqual({ name: 'ai', chosen: true });
+  });
 });
