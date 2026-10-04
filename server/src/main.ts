@@ -4,7 +4,7 @@ import { createApp } from './app';
 import { loadConfig } from './config';
 import { backupDir, logDir, type AppContext } from './context';
 import { openDatabase } from './db/open';
-import { staticPath } from './http';
+import { isOwnRequest, staticPath } from './http';
 import { logError } from './log';
 import { exportData } from './services/transfer';
 
@@ -71,9 +71,10 @@ const server = Bun.serve({
   idleTimeout: 0,
   fetch(request) {
     const { pathname } = new URL(request.url);
-    if (pathname === '/api/alive') return alive(request);
-    if (pathname.startsWith('/api/')) return app.fetch(request);
-    return staticFile(pathname);
+    if (!pathname.startsWith('/api/')) return staticFile(pathname);
+    // Only the app itself may use the API, not other web pages open in the browser.
+    if (!isOwnRequest(request)) return Response.json({ message: 'Not allowed from here.' }, { status: 403 });
+    return pathname === '/api/alive' ? alive(request) : app.fetch(request);
   },
 });
 
