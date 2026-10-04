@@ -24,8 +24,33 @@ async function isRunning(): Promise<boolean> {
   }
 }
 
+/** When the server's code last changed. */
+function codeChangedAt(): number {
+  const dir = path.join(PROJECT_ROOT, 'server', 'src');
+  const files = fs.readdirSync(dir, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile());
+  return Math.max(...files.map(file => fs.statSync(path.join(file.parentPath, file.name)).mtimeMs));
+}
+
+/** Stops a running server that was started before its code last changed. */
+async function stopOutdatedServer(): Promise<void> {
+  const response = await fetch(`${url}/api/server`, { signal: AbortSignal.timeout(1000) });
+  const startedAt = response.ok ? ((await response.json()) as { startedAt: number }).startedAt : 0;
+  if (startedAt >= codeChangedAt()) return;
+  await fetch(`${url}/api/quit`, { method: 'POST', signal: AbortSignal.timeout(1000) });
+  const deadline = Date.now() + 5000;
+  while (await isRunning()) {
+    if (Date.now() > deadline) {
+      console.error('An older Folder Tagger server is still running. Close its window, wait a moment and try again.');
+      process.exit(1);
+    }
+    await Bun.sleep(150);
+  }
+}
+
 const detached = (command: string, args: string[], env = process.env) =>
   spawn(command, args, { cwd: PROJECT_ROOT, env, detached: true, windowsHide: true, stdio: 'ignore' }).unref();
+
+if (await isRunning()) await stopOutdatedServer();
 
 if (!(await isRunning())) {
   if (!fs.existsSync(path.join(config.webDist, 'index.html'))) {

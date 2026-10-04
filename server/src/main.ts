@@ -14,6 +14,7 @@ import { exportData } from './services/transfer';
  */
 const EXIT_DELAY_MS = 15000;
 
+const startedAt = Date.now();
 const config = loadConfig();
 const ctx: AppContext = {
   db: openDatabase(path.join(config.dataDir, 'app.db'), backupDir(config.dataDir)),
@@ -35,6 +36,11 @@ try {
 let windows = 0;
 let exitTimer: ReturnType<typeof setTimeout> | undefined;
 
+function quit(): void {
+  ctx.db.close();
+  process.exit(0);
+}
+
 function alive(request: Request): Response {
   windows++;
   clearTimeout(exitTimer);
@@ -43,11 +49,7 @@ function alive(request: Request): Response {
       controller.enqueue(new TextEncoder().encode(': connected\n\n'));
       request.signal.addEventListener('abort', () => {
         windows--;
-        if (windows === 0 && process.env.FT_EXIT_WHEN_IDLE === '1')
-          exitTimer = setTimeout(() => {
-            ctx.db.close();
-            process.exit(0);
-          }, EXIT_DELAY_MS);
+        if (windows === 0 && process.env.FT_EXIT_WHEN_IDLE === '1') exitTimer = setTimeout(quit, EXIT_DELAY_MS);
         try {
           controller.close();
         } catch {
@@ -77,7 +79,14 @@ const server = Bun.serve({
     if (!pathname.startsWith('/api/')) return staticFile(pathname);
     // Only the app itself may use the API, not other web pages open in the browser.
     if (!isOwnRequest(request)) return Response.json({ message: 'Not allowed from here.' }, { status: 403 });
-    return pathname === '/api/alive' ? alive(request) : app.fetch(request);
+    if (pathname === '/api/alive') return alive(request);
+    // The launcher asks when this server started, and tells an outdated one to stop.
+    if (pathname === '/api/server') return Response.json({ startedAt });
+    if (pathname === '/api/quit' && request.method === 'POST') {
+      setTimeout(quit, 50);
+      return Response.json({ ok: true });
+    }
+    return app.fetch(request);
   },
 });
 
