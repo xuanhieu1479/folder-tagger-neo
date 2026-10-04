@@ -4,6 +4,7 @@ import { createApp } from './app';
 import { loadConfig } from './config';
 import { backupDir, logDir, type AppContext } from './context';
 import { openDatabase } from './db/open';
+import { staticPath } from './http';
 import { logError } from './log';
 import { exportData } from './services/transfer';
 
@@ -57,9 +58,8 @@ function alive(request: Request): Response {
 
 /** Serves the built web app; any unknown path gets index.html. */
 function staticFile(pathname: string): Response {
-  const file = path.join(config.webDist, path.normalize(decodeURIComponent(pathname)));
-  if (file.startsWith(config.webDist) && fs.statSync(file, { throwIfNoEntry: false })?.isFile())
-    return new Response(Bun.file(file));
+  const file = staticPath(config.webDist, pathname);
+  if (file) return new Response(Bun.file(file));
   const index = path.join(config.webDist, 'index.html');
   if (fs.existsSync(index)) return new Response(Bun.file(index));
   return new Response('The web app has not been built yet. Run: bun run build', { status: 503 });
