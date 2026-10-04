@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import * as v from 'valibot';
-import { backupDir, type AppContext } from '../context';
+import { backupDir, thumbDir, type AppContext } from '../context';
 import { applyCleanup, previewCleanup } from '../services/cleanup';
 import { getSettings, saveSettings } from '../services/settings';
 import { exportData, importData, ImportSchema } from '../services/transfer';
@@ -19,9 +19,9 @@ const SettingsSchema = v.partial(
 
 export const maintenanceRoutes = (ctx: AppContext) =>
   new Hono()
-    .get('/cleanup', c => c.json(previewCleanup(ctx.db)))
+    .get('/cleanup', c => c.json(previewCleanup(ctx.db, thumbDir(ctx.dataDir))))
     .post('/cleanup', jsonBody(v.object({ removeIds: v.array(v.number()) })), c =>
-      c.json(applyCleanup(ctx.db, c.req.valid('json').removeIds, backupDir(ctx.dataDir))),
+      c.json(applyCleanup(ctx.db, c.req.valid('json').removeIds, backupDir(ctx.dataDir), thumbDir(ctx.dataDir))),
     )
     .post('/export', c => c.json(exportData(ctx.db, backupDir(ctx.dataDir))))
     .post('/import', jsonBody(ImportBody), c => {

@@ -12,7 +12,9 @@
   let plan = $state<CleanupPlan | null>(null);
   let working = $state(false);
 
-  const nothingToDo = $derived(plan !== null && plan.missing.length === 0 && plan.thumbnails.length === 0);
+  const nothingToDo = $derived(
+    plan !== null && plan.missing.length === 0 && plan.thumbnails.length === 0 && plan.unusedCopies.length === 0,
+  );
 
   // Check the disk each time the dialog opens. Nothing is changed until the user confirms.
   $effect(() => {
@@ -33,7 +35,9 @@
     const result = await attempt(() => call(api.cleanup.$post({ json: { removeIds } })));
     working = false;
     if (!result) return;
-    toast.success(`Removed ${result.removed} entries, updated ${result.thumbnailsUpdated} thumbnails.`);
+    toast.success(
+      `Removed ${result.removed} entries, updated ${result.thumbnailsUpdated} thumbnails, deleted ${result.copiesDeleted} unused thumbnail copies.`,
+    );
     if (result.logFile) toast.info(`The removed paths are saved in ${result.logFile}`, { duration: 15000 });
     ui.cleanupOpen = false;
     await refresh();
@@ -45,7 +49,8 @@
     <Dialog.Header>
       <Dialog.Title>Clean Up Missing Folders</Dialog.Title>
       <Dialog.Description>
-        Removes library entries whose folders no longer exist and finds missing thumbnails. Nothing on disk is deleted.
+        Removes library entries whose folders no longer exist, finds missing thumbnails and deletes small thumbnail
+        copies that are no longer used. Your folders on disk are never touched.
       </Dialog.Description>
     </Dialog.Header>
 
@@ -67,7 +72,9 @@
             <span class="font-medium">{plan.missing.length}</span>
             entr{plan.missing.length === 1 ? 'y' : 'ies'} to remove,
             <span class="font-medium">{plan.thumbnails.length}</span>
-            thumbnail{plan.thumbnails.length === 1 ? '' : 's'} to update.
+            thumbnail{plan.thumbnails.length === 1 ? '' : 's'} to update,
+            <span class="font-medium">{plan.unusedCopies.length}</span>
+            unused thumbnail cop{plan.unusedCopies.length === 1 ? 'y' : 'ies'} to delete.
           </p>
           {#if plan.missing.length > 0}
             <ul class="max-h-72 overflow-y-auto rounded-lg border px-3 py-2">
@@ -84,7 +91,7 @@
       <Button variant="outline" onclick={() => (ui.cleanupOpen = false)}>{nothingToDo ? 'Close' : 'Cancel'}</Button>
       {#if plan !== null && !nothingToDo}
         <Button variant={plan.missing.length > 0 ? 'destructive' : 'default'} disabled={working} onclick={apply}>
-          {plan.missing.length > 0 ? `Remove ${plan.missing.length} and update thumbnails` : 'Update thumbnails'}
+          {plan.missing.length > 0 ? `Remove ${plan.missing.length} and clean up` : 'Clean up'}
         </Button>
       {/if}
     </Dialog.Footer>

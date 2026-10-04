@@ -16,7 +16,7 @@ Everything is inside this folder, under `data/` (ignored by git):
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `data/app.db`   | The library (SQLite).                                                                                                                                                    |
 | `data/backups/` | JSON exports. One is written at startup whenever the library changed since the last one. Clean-up and import logs (`-CLEARED.json`, `-IMPORT-FAILED.json`) also go here. |
-| `data/thumbs/`  | Small copies of the thumbnails for the grid. Safe to delete; they are made again when needed.                                                                            |
+| `data/thumbs/`  | Small copies of the thumbnails for the grid. Clean-up deletes the ones no longer used. Safe to delete; they are made again when needed.                                  |
 | `data/logs/`    | Error logs, one file per day.                                                                                                                                            |
 
 ## Development

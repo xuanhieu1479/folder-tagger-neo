@@ -54,15 +54,22 @@ async function makeSmall(source: string, file: string): Promise<string> {
   }
 }
 
+const SMALL_SUFFIX = '.webp';
+
+/** The file name of an image's small copy, or null when the image is missing. */
+function smallName(source: string): string | null {
+  const stat = fs.statSync(source, { throwIfNoEntry: false });
+  return stat ? Bun.hash(`${source}\n${stat.mtimeMs}\n${stat.size}`).toString(36) + SMALL_SUFFIX : null;
+}
+
 /**
  * The path of a small WebP copy of an image for the grid. The copy is made on first
  * use and kept in `cacheDir`; a changed image gets a new copy.
  */
 export async function smallThumbnail(source: string, cacheDir: string): Promise<string> {
-  const stat = fs.statSync(source, { throwIfNoEntry: false });
-  if (!stat) throw new HttpError(404, 'The thumbnail file is missing.');
-  const key = Bun.hash(`${source}\n${stat.mtimeMs}\n${stat.size}`).toString(36);
-  const file = path.join(cacheDir, `${key}.webp`);
+  const name = smallName(source);
+  if (!name) throw new HttpError(404, 'The thumbnail file is missing.');
+  const file = path.join(cacheDir, name);
   if (fs.existsSync(file)) return file;
 
   let job = pending.get(file);
@@ -71,4 +78,10 @@ export async function smallThumbnail(source: string, cacheDir: string): Promise<
     pending.set(file, job);
   }
   return job;
+}
+
+/** The small copies in `cacheDir` (file names) that belong to none of the given images. */
+export function unusedSmallThumbnails(sources: string[], cacheDir: string): string[] {
+  const used = new Set(sources.map(smallName));
+  return listFiles(cacheDir).filter(name => name.endsWith(SMALL_SUFFIX) && !used.has(name));
 }

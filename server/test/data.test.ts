@@ -3,14 +3,15 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as v from 'valibot';
-import { applyCleanup, planCleanup, type Probe } from '../src/services/cleanup';
+import { applyCleanup, planCleanup, previewCleanup, type Probe } from '../src/services/cleanup';
 import { addFolders, getFolder, listFolders } from '../src/services/folders';
 import { imagePath, listImages, openReader } from '../src/services/reader';
 import { getSettings, saveSettings } from '../src/services/settings';
 import { applyTags, folderTags } from '../src/services/tags';
+import { smallThumbnail } from '../src/services/thumbnails';
 import { exportData, importData, ImportSchema, type ImportData } from '../src/services/transfer';
 import { emptyTagMap, type ExportFile } from '../src/shared/types';
-import { makeFolder, memoryDb, seedFolder, tempDir } from './fixtures';
+import { makeFolder, memoryDb, PNG, seedFolder, tempDir } from './fixtures';
 
 const tmp = tempDir('data');
 afterAll(tmp.cleanup);
@@ -18,11 +19,13 @@ afterAll(tmp.cleanup);
 let db: Database;
 let root: string;
 let backups: string;
+let thumbs: string;
 let counter = 0;
 beforeEach(() => {
   db = memoryDb();
   root = path.join(tmp.dir, String(counter++));
   backups = path.join(root, 'backups');
+  thumbs = path.join(root, 'thumbs');
   fs.mkdirSync(root);
 });
 
@@ -142,9 +145,30 @@ describe('import', () => {
 });
 
 describe('clean-up', () => {
+  test('deletes small thumbnail copies that no folder uses any more', async () => {
+    const kept = makeFolder(root, 'kept', ['1.png']);
+    const changed = makeFolder(root, 'changed', ['1.png']);
+    const gone = makeFolder(root, 'gone', ['1.png']);
+    addFolders(db, [kept, changed, gone]);
+    const copy = (dir: string) => smallThumbnail(path.join(dir, '1.png'), thumbs);
+    const copies = { kept: await copy(kept), changed: await copy(changed), gone: await copy(gone) };
+    fs.writeFileSync(path.join(thumbs, 'notes.txt'), 'not a copy');
+
+    fs.writeFileSync(path.join(changed, '1.png'), Buffer.concat([PNG, PNG]));
+    fs.rmSync(gone, { recursive: true });
+
+    const plan = previewCleanup(db, thumbs);
+    expect(plan.unusedCopies.sort()).toEqual([copies.changed, copies.gone].map(file => path.basename(file)).sort());
+    expect(fs.readdirSync(thumbs)).toHaveLength(4);
+
+    expect(applyCleanup(db, [], backups, thumbs)).toMatchObject({ removed: 0, copiesDeleted: 2 });
+    expect(fs.readdirSync(thumbs).sort()).toEqual([path.basename(copies.kept), 'notes.txt'].sort());
+  });
+
   const fakeDisk = (present: string[], thumbnails: Record<string, string> = {}): Probe => ({
     exists: target => present.includes(target),
     findThumbnail: dir => thumbnails[dir] ?? null,
+    unusedCopies: sources => sources,
   });
   const entries = [
     { id: 1, name: 'here', path: 'C:\\lib\\here', thumbnail: '1.png' },
@@ -167,6 +191,8 @@ describe('clean-up', () => {
         { root: '\\\\nas\\media\\', count: 1 },
       ],
       thumbnails: [{ id: 5, thumbnail: 'new.png' }],
+      // The fake disk hands back the thumbnails in use: those of reachable, present folders.
+      unusedCopies: ['C:\\lib\\here\\1.png', 'C:\\lib\\lost\\new.png'],
     });
   });
 
@@ -188,7 +214,7 @@ describe('clean-up', () => {
     fs.rmSync(path.join(kept, '1.png'));
     fs.writeFileSync(path.join(kept, 'cover.jpg'), 'x');
 
-    const result = applyCleanup(db, [ids.gone, ids.kept], backups);
+    const result = applyCleanup(db, [ids.gone, ids.kept], backups, thumbs);
     expect(result).toMatchObject({ removed: 1, thumbnailsUpdated: 1 });
     expect(names()).toEqual(['kept', 'unconfirmed']);
     expect(getFolder(db, ids.kept).thumbnail).toBe('cover.jpg');
@@ -201,7 +227,12 @@ describe('clean-up', () => {
     addFolders(db, [dir]);
     db.prepare('UPDATE folders SET updated_at = 1').run();
     fs.writeFileSync(path.join(dir, '1.png'), 'x');
-    expect(applyCleanup(db, [], backups)).toEqual({ removed: 0, thumbnailsUpdated: 1, logFile: null });
+    expect(applyCleanup(db, [], backups, thumbs)).toEqual({
+      removed: 0,
+      thumbnailsUpdated: 1,
+      copiesDeleted: 0,
+      logFile: null,
+    });
     const row = db.query('SELECT updated_at, thumbnail FROM folders').get();
     expect(row).toEqual({ updated_at: 1, thumbnail: '1.png' });
   });
