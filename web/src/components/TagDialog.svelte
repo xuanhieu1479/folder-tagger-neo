@@ -25,6 +25,8 @@
   let form = $state<TagForm>({ selected: emptyTagMap(), order: emptyTagMap() });
   let folderIds = $state<number[]>([]);
   let saving = $state(false);
+  /** False while Edit Tags waits for the folder's current tags; saving then would wipe them. */
+  let ready = $state(true);
   // Kept while the dialog animates out, so its title does not flicker.
   let mode = $state<TagMode>('add');
 
@@ -37,13 +39,21 @@
       mode = opened;
       folderIds = [...library.selected];
       form = { selected: emptyTagMap(), order: structuredClone(tags.byType) };
-      if (opened === 'edit') void loadCurrentTags(folderIds[0]!);
+      ready = opened !== 'edit';
+      if (!ready) void loadCurrentTags(folderIds[0]!);
     });
   });
 
   async function loadCurrentTags(id: number) {
     const current = await attempt(() => call(api.folders[':id'].tags.$get(idParam(id))));
-    if (current) form.selected = current;
+    // The dialog may have been closed, or opened for something else, in the meantime.
+    if (ready || ui.tagDialog !== 'edit' || folderIds[0] !== id) return;
+    if (!current) {
+      ui.tagDialog = null;
+      return;
+    }
+    form.selected = current;
+    ready = true;
   }
 
   function onPick(type: TagType, name: string, existed: boolean) {
@@ -83,7 +93,7 @@
       </Dialog.Description>
     </Dialog.Header>
 
-    <div class="grid grid-cols-[5.5rem_1fr] items-start gap-x-3 gap-y-3">
+    <div class="grid grid-cols-[5.5rem_1fr] items-start gap-x-3 gap-y-3" inert={!ready}>
       {#each TAG_TYPES as type (type)}
         <Label for="tag-input-{type}" class="mt-2.5 justify-end">{LABELS[type]}</Label>
         <TagInput
@@ -99,7 +109,7 @@
 
     <Dialog.Footer>
       <Button variant="outline" onclick={() => (ui.tagDialog = null)}>Cancel</Button>
-      <Button disabled={saving} onclick={save}>Save</Button>
+      <Button disabled={saving || !ready} onclick={save}>Save</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
