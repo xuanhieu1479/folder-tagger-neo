@@ -12,7 +12,8 @@
     "start": "bun scripts/start.ts",
     "test": "bun test",
     "check": "tsc -p server && bun run --filter web check",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed": "bun scripts/seed-dev.ts"
   },
   "devDependencies": {
     "prettier": "^3.9.9",
