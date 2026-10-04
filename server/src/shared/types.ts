@@ -1,0 +1,54 @@
+export const TAG_TYPES = ['author', 'parody', 'character', 'genre', 'category'] as const;
+export type TagType = (typeof TAG_TYPES)[number];
+export type TagMap = Record<TagType, string[]>;
+
+export const emptyTagMap = (): TagMap => ({ author: [], parody: [], character: [], genre: [], category: [] });
+
+export const SORTS = ['alpha', 'updated', 'popular', 'random'] as const;
+export type Sort = (typeof SORTS)[number];
+
+export const PAGE_SIZES = [25, 50, 100] as const;
+
+export type TagCount = { type: TagType; name: string; count: number };
+
+/** Which tags usually go together, learned from the library. Lists are ordered most likely first. */
+export type Relations = {
+  parody_character: Record<string, string[]>;
+  author_parody: Record<string, string[]>;
+  author_genre: Record<string, string[]>;
+  author_category: Record<string, string[]>;
+};
+
+export const emptyRelations = (): Relations => ({
+  parody_character: {},
+  author_parody: {},
+  author_genre: {},
+  author_category: {},
+});
+
+export type Settings = {
+  defaultSearch: string;
+  randomAtStartup: boolean;
+  pageSize: number;
+};
+
+export const DEFAULT_SETTINGS: Settings = { defaultSearch: '', randomAtStartup: false, pageSize: 25 };
+
+export type FolderItem = { id: number; name: string; path: string; thumbnail: string | null };
+
+export type ExportFolder = {
+  path: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  openCount: number;
+  lastOpenedAt: number | null;
+  tags: TagMap;
+};
+
+export type ExportFile = {
+  app: 'folder-tagger-neo';
+  version: 1;
+  exportedAt: number;
+  folders: ExportFolder[];
+};
