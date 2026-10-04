@@ -126,6 +126,14 @@ describe('parseSearch: keys', () => {
     expect(parseSearch('name:')).toEqual({ terms: [], filters: [] });
   });
 
+  test('-key:word excludes that word only', () => {
+    expect(parseSearch('-author:kai bob -name:"big day"').terms).toEqual([
+      term('kai', { field: 'author', exclude: true }),
+      term('bob', { field: 'author' }),
+      term('big day', { field: 'name', exclude: true, exact: true }),
+    ]);
+  });
+
   test('quotes and exclusion work after a key', () => {
     expect(parseSearch('author:"ai" -"bob smith"').terms).toEqual([
       term('ai', { field: 'author', exact: true }),

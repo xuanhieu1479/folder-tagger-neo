@@ -18,7 +18,7 @@ export type Filter = { kind: 'no' | 'have' | 'many'; type: TagType };
 
 export type ParsedQuery = { terms: Term[]; filters: Filter[] };
 
-const KEY = new RegExp(`^(name|${TAG_TYPES.join('|')}):`);
+const KEY = new RegExp(`^(-?)(name|${TAG_TYPES.join('|')}):`);
 const FILTER = new RegExp(`^(no|have|many)_(${TAG_TYPES.join('|')})$`);
 const END_OF_KEY = '$';
 const IGNORED_WORDS = new Set(['the']);
@@ -30,7 +30,7 @@ const SHORT_WORD = /^[a-z0-9]{1,2}$/;
  *   iron man                 two plain words, each must match the name or a tag
  *   author: abc def          a key applies to every word after it...
  *   author: abc $ iron       ...until `$` or the next key
- *   -word  "exact name"  -"exact name"
+ *   -word  "exact name"  -"exact name"  -author:abc
  *   no_author  have_genre  many_parody
  */
 export function parseSearch(input: string): ParsedQuery {
@@ -39,10 +39,14 @@ export function parseSearch(input: string): ParsedQuery {
   const filters: Filter[] = [];
   const seen = new Set<string>();
   let field: Field = 'any';
+  /** Set by -key: and used up by the next word. */
+  let excludeNext = false;
   let i = 0;
 
   const addTerm = (word: string, exclude: boolean, exact: boolean) => {
-    const term: Term = { field, text: word, exclude, exact, whole: !exact && SHORT_WORD.test(word) };
+    const whole = !exact && SHORT_WORD.test(word);
+    const term: Term = { field, text: word, exclude: exclude || excludeNext, exact, whole };
+    excludeNext = false;
     const key = JSON.stringify(term);
     if (!seen.has(key)) {
       seen.add(key);
@@ -63,7 +67,8 @@ export function parseSearch(input: string): ParsedQuery {
     }
     const key = KEY.exec(text.slice(i));
     if (key) {
-      field = key[1] as Field;
+      excludeNext = key[1] === '-';
+      field = key[2] as Field;
       i += key[0].length;
       continue;
     }
