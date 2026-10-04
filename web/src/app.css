@@ -131,3 +131,19 @@
 		@apply bg-popover text-popover-foreground;
 	}
 }
+
+/* The coloured toasts of svelte-sonner are almost black in dark mode; these can be read. */
+.dark [data-sonner-toaster][data-sonner-theme] {
+	--error-bg: oklch(0.42 0.15 25);
+	--error-border: oklch(0.64 0.21 25);
+	--error-text: oklch(0.97 0.01 25);
+	--success-bg: oklch(0.4 0.1 150);
+	--success-border: oklch(0.65 0.17 150);
+	--success-text: oklch(0.97 0.02 150);
+	--warning-bg: oklch(0.45 0.1 70);
+	--warning-border: oklch(0.72 0.16 70);
+	--warning-text: oklch(0.98 0.02 90);
+	--info-bg: oklch(0.42 0.1 240);
+	--info-border: oklch(0.65 0.15 240);
+	--info-text: oklch(0.97 0.01 240);
+}

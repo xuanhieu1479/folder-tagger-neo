@@ -25,6 +25,7 @@ const listingFor = (db: Database): Map<number, string[]> => {
 export function openReader(db: Database, id: number): { name: string; count: number } {
   const folder = getFolder(db, id);
   const images = listImages(folder.path);
+  if (images.length === 0) throw new HttpError(404, 'This folder has no images.');
   listingFor(db).set(id, images);
   markOpened(db, id);
   return { name: folder.name, count: images.length };

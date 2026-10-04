@@ -8,8 +8,11 @@ import { isOwnRequest, staticPath } from './http';
 import { logError } from './log';
 import { exportData } from './services/transfer';
 
-/** How long the server keeps running after the last app window closes. */
-const EXIT_DELAY_MS = 4000;
+/**
+ * How long the server keeps running after the last app window closes. A window that
+ * lost its connection (the PC slept, say) reconnects within a few seconds, well inside this.
+ */
+const EXIT_DELAY_MS = 15000;
 
 const config = loadConfig();
 const ctx: AppContext = {

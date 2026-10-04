@@ -33,7 +33,7 @@
   tabindex="-1"
   class={[
     'w-[250px] overflow-hidden rounded-xl border bg-card text-card-foreground outline-offset-2 transition-shadow hover:shadow-md',
-    selected && 'outline-2 outline-sky-500',
+    selected && 'border-sky-400 bg-sky-500/25 outline-4 outline-sky-400',
   ]}
   onclick={select}
   oncontextmenu={() => (library.selected = contextSelection(library.selected, folder.id))}

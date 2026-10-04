@@ -40,5 +40,6 @@ export async function pickFolders(multi: boolean, initialPath = ''): Promise<str
 /** Opens a folder in Windows Explorer without waiting for Explorer to close. */
 export function openInExplorer(folderPath: string): void {
   if (!fs.existsSync(folderPath)) throw new HttpError(404, `${folderPath}\ndoes not exist!`);
-  spawn('explorer.exe', [folderPath], { detached: true, windowsHide: true, stdio: 'ignore' }).unref();
+  // No windowsHide here: Explorer would open its window hidden.
+  spawn('explorer.exe', [folderPath], { detached: true, stdio: 'ignore' }).unref();
 }

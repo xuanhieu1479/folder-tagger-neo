@@ -307,10 +307,11 @@ describe('reader', () => {
     expect(() => imagePath(db, id, 2)).toThrow('No such image.');
   });
 
-  test('a folder without images just has none', () => {
+  test('a folder without images is not opened, and not counted as opened', () => {
     addFolders(db, [makeFolder(root, 'audio', ['track.txt'])]);
     const id = (db.query('SELECT id FROM folders').get() as { id: number }).id;
-    expect(openReader(db, id)).toEqual({ name: 'audio', count: 0 });
+    expect(() => openReader(db, id)).toThrow('This folder has no images.');
+    expect(db.query('SELECT open_count FROM folders WHERE id = ?').get(id)).toEqual({ open_count: 0 });
   });
 });
 

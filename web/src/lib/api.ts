@@ -9,7 +9,13 @@ export const idParam = (id: number) => ({ param: { id: String(id) } });
 
 /** Awaits an API call and returns its JSON, throwing the server's message on failure. */
 export async function call<T>(request: Promise<{ ok: boolean; json(): Promise<T> }>): Promise<T> {
-  const response = await request;
+  let response;
+  try {
+    response = await request;
+  } catch {
+    // fetch only rejects when the server could not be reached at all.
+    throw new Error('The Folder Tagger server is not running. Close this window and start the app again.');
+  }
   const body = await response.json();
   if (!response.ok) throw new Error((body as { message?: string }).message ?? 'Request failed');
   return body;
