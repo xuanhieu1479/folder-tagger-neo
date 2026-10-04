@@ -8,6 +8,7 @@ describe('normalizeTagName', () => {
   test.each([
     ['Iron Man', 'iron man'],
     ['  Big   Sister  ', 'big sister'],
+    ['\tappetite \n', 'appetite'],
     ['Re:Zero!', 'rezero'],
     ['sci-fi', 'sci-fi'],
     ['東方Project', '東方project'],
