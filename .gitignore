@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+.vite/
+.svelte-kit/
+
+# Local app data (SQLite database, exports, logs)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+data/
+*.log
+
+# Env and editor/OS files
+.env
+.env.*
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
